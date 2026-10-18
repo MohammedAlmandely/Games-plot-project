@@ -1,0 +1,19 @@
+{
+  "name": "gamesplot-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GamesPlot REST API backed by MySQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate:firestore": "node scripts/migrate-firestore.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "mysql2": "^3.14.5"
+  }
+}

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Plot | الإشعارات</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="shared.js"></script>
+    <style>
+        :root { --primary: #a855f7; --bg-body: #0b0f1a; --bg-card: #111827; --accent: #1f2937; --text-dim: #9ca3af; --error: #ef4444; --success: #22c55e; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg-body); color: white; }
+        header { background: var(--bg-card); padding: 15px 5%; border-bottom: 2px solid var(--primary); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+
+        .notif-card { background: var(--bg-card); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 4px solid var(--accent); cursor: pointer; transition: 0.3s; position: relative; }
+        .notif-card.unread { background: rgba(239, 68, 68, 0.08) !important; border-right: 4px solid var(--error) !important; }
+        .notif-card.unread::after { content: 'جديد'; position: absolute; left: 15px; top: 15px; background: var(--error); color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: bold; }
+        /* ✅ إصلاح: منع تأثير hover على بطاقة السؤال المحذوف */
+        .notif-card:hover:not(.deleted) { transform: translateX(-5px); background: #1e293b; }
+        .notif-card.deleted { opacity: 0.45; cursor: not-allowed; border-right-color: #374151 !important; background: rgba(55,65,81,0.3) !important; }
+        .notif-card.deleted::before { content: 'السؤال لم يعد موجوداً'; position: absolute; left: 15px; top: 15px; background: #374151; color: var(--text-dim); font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+        .notif-card.deleted.unread::after { display: none; }
+
+        .notif-title { font-size: 14px; margin-bottom: 5px; display: block; line-height: 1.6; }
+        .notif-time { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-small { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Cairo'; cursor: pointer; font-size: 12px; transition: 0.2s; }
+        .btn-small:hover { opacity: 0.85; }
+        .btn-small:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ✅ عداد الإشعارات غير المقروءة */
+        .unread-count { background: var(--error); color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; margin-right: 8px; display: none; }
+
+        /* skeleton loader */
+        .skeleton { background: linear-gradient(90deg, #1f2937 25%, #2d3748 50%, #1f2937 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; height: 70px; margin-bottom: 10px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body>
+<header>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <a href="index.html" style="color: var(--primary); font-size: 20px;"><i class="fas fa-arrow-right"></i></a>
+        <h3 style="margin: 0;">الإشعارات <span class="unread-count" id="unreadCount"></span></h3>
+    </div>
+</header>
+<div class="container">
+    <div class="controls">
+        <button class="btn-small" id="markReadBtn" onclick="markAllRead()">قراءة الكل</button>
+        <button class="btn-small" id="deleteAllBtn" onclick="deleteAllNotifs()" style="color: var(--error);">حذف الكل</button>
+    </div>
+    <!-- ✅ skeleton loader بدل نص "جاري التحميل" -->
+    <div id="notifList">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, getDoc, updateDoc, getDocs, writeBatch } from "./api-firestore.js";
+
+    const firebaseConfig = { apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw", authDomain: "gamerhub-7ca56.firebaseapp.com", projectId: "gamerhub-7ca56", appId: "1:228228967948:web:83a919fd0dfceb07aa8829" };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ✅ إصلاح: cache للأسئلة المحققة (موجود/محذوف) لتفادي طلبات متكررة
+    const questionExistsCache = {};
+
+    async function checkQuestionExists(qId) {
+        if (qId in questionExistsCache) return questionExistsCache[qId];
+        try {
+            const snap = await getDoc(doc(db, "questions", qId));
+            questionExistsCache[qId] = snap.exists();
+            return snap.exists();
+        } catch {
+            questionExistsCache[qId] = false;
+            return false;
+        }
+    }
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) loadNotifications(user.uid);
+        else window.location.href = "login.html";
+    });
+
+    function formatTime(timestamp) {
+        if (!timestamp) return "الآن";
+        const diff = Math.floor((new Date() - timestamp.toDate()) / 1000);
+        if (diff < 60) return "الآن";
+        if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
+        if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
+        if (diff < 86400 * 7) return `منذ ${Math.floor(diff / 86400)} يوم`;
+        return timestamp.toDate().toLocaleDateString('ar-SA');
+    }
+
+    async function loadNotifications(uid) {
+        const q = query(
+            collection(db, "notifications"),
+            where("ownerId", "==", uid),
+            orderBy("timestamp", "desc")
+        );
+
+        onSnapshot(q, async (snapshot) => {
+            const list = document.getElementById('notifList');
+
+            if (snapshot.empty) {
+                list.innerHTML = "<p style='text-align:center; color:var(--text-dim); padding:40px;'><i class='fas fa-bell-slash' style='font-size:30px; display:block; margin-bottom:10px;'></i>لا توجد إشعارات.</p>";
+                document.getElementById('unreadCount').style.display = 'none';
+                return;
+            }
+
+            // ✅ إصلاح: التحقق من وجود الأسئلة قبل العرض دفعة واحدة
+            const notifs = [];
+            snapshot.forEach(d => notifs.push({ id: d.id, ...d.data() }));
+
+            const uniqueQIds = [...new Set(notifs.map(n => n.questionId).filter(Boolean))];
+            await Promise.all(uniqueQIds.map(qId => checkQuestionExists(qId)));
+
+            // عداد الغير مقروءة
+            const unreadCount = notifs.filter(n => !n.isRead).length;
+            const badge = document.getElementById('unreadCount');
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+
+            let html = "";
+            notifs.forEach(n => {
+                const exists = questionExistsCache[n.questionId] !== false;
+                const timeStr = formatTime(n.timestamp);
+
+                const icon = n.type === 'best_answer'
+                    ? `<i class="fas fa-check-circle" style="color:var(--success)"></i>`
+                    : `<i class="fas fa-comment" style="color:var(--primary)"></i>`;
+
+                // ✅ استخدام escapeHtml الموحّدة من shared.js بدل التنقية اليدوية المكررة
+                const safeTitle = escapeHtml(n.questionTitle || 'سؤال');
+                const safeUser = escapeHtml(n.fromUser || 'مستخدم');
+
+                const msg = n.type === 'best_answer'
+                    ? `مبروك! اعتُمد ردك كأفضل إجابة في: <b>${safeTitle}</b>`
+                    : `رد جديد من <b>${safeUser}</b> في: <b>${safeTitle}</b>`;
+
+                // ✅ إصلاح: إشعارات الأسئلة المحذوفة تظهر بشكل مختلف وغير قابلة للضغط
+                if (!exists) {
+                    html += `
+                    <div class="notif-card deleted ${n.isRead ? '' : 'unread'}">
+                        <span class="notif-title" style="padding-left:70px;">${icon} ${msg}</span>
+                        <span class="notif-time"><i class="far fa-clock"></i> ${timeStr}</span>
+                    </div>`;
+                } else {
+                    html += `
+                    <div class="notif-card ${n.isRead ? '' : 'unread'}" onclick="goToQuestion('${n.id}', '${n.questionId}', '${n.commentId}')">
+                        <span class="notif-title">${icon} ${msg}</span>
+                        <span class="notif-time"><i class="far fa-clock"></i> ${timeStr}</span>
+                    </div>`;
+                }
+            });
+
+            list.innerHTML = html;
+        });
+    }
+
+    // ✅ إصلاح: التحقق من وجود السؤال قبل الانتقال إليه
+    window.goToQuestion = async (notifId, qId, cId) => {
+        try {
+            // تحديث حالة القراءة
+            await updateDoc(doc(db, "notifications", notifId), { isRead: true });
+        } catch (e) {
+            console.error("تعذّر تحديث حالة الإشعار:", e);
+        }
+
+        // التحقق من وجود السؤال قبل الانتقال
+        const exists = await checkQuestionExists(qId);
+        if (!exists) {
+            // ✅ إصلاح: رسالة واضحة بدل الانتقال لصفحة فارغة
+            showToast("هذا السؤال لم يعد موجوداً", "error");
+            return;
+        }
+
+        const anchor = cId && cId !== 'new' ? `#comment-${cId}` : '';
+        window.location.href = `question.html?id=${qId}${anchor}`;
+    };
+
+    // ✅ إصلاح: استخدام id الزر مباشرة بدل querySelector هش
+    window.markAllRead = async () => {
+        const btn = document.getElementById('markReadBtn');
+        btn.disabled = true;
+        btn.innerText = "جاري التحديث...";
+
+        try {
+            const q = query(
+                collection(db, "notifications"),
+                where("ownerId", "==", auth.currentUser.uid),
+                where("isRead", "==", false)
+            );
+            const snap = await getDocs(q);
+            if (snap.empty) return;
+
+            const batch = writeBatch(db);
+            snap.forEach(d => batch.update(d.ref, { isRead: true }));
+            await batch.commit();
+        } catch (e) {
+            console.error("خطأ في تحديث الإشعارات:", e);
+            showToast("حدث خطأ، جرب مرة ثانية", "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "قراءة الكل";
+        }
+    };
+
+    window.deleteAllNotifs = () => {
+        const modal = document.getElementById('deleteConfirmModal');
+        modal.style.display = 'flex';
+        document.getElementById('deleteConfirmOk').onclick = async () => {
+            modal.style.display = 'none';
+            const btn = document.getElementById('deleteAllBtn');
+            btn.disabled = true;
+            btn.innerText = "جاري الحذف...";
+            try {
+                const q = query(collection(db, "notifications"), where("ownerId", "==", auth.currentUser.uid));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const batch = writeBatch(db);
+                    snap.forEach(d => batch.delete(d.ref));
+                    await batch.commit();
+                }
+            } catch (e) {
+                console.error("خطأ في حذف الإشعارات:", e);
+                showToast("حدث خطأ أثناء الحذف", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "حذف الكل";
+            }
+        };
+    };
+
+    // ✅ إضافة: toast بسيط للرسائل
+    function showToast(msg, type = "info") {
+        const existing = document.getElementById('toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: ${type === 'error' ? '#ef4444' : '#a855f7'};
+            color: white; padding: 10px 22px; border-radius: 30px;
+            font-size: 14px; font-family: 'Cairo'; font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4); z-index: 9999;
+            transition: opacity 0.4s ease;
+        `;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 2500);
+    }
+</script>
+
+<div id="deleteConfirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:5000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#111827; border:1px solid #a855f7; border-radius:20px; padding:28px 24px; width:90%; max-width:320px; text-align:center; box-shadow:0 0 30px rgba(168,85,247,0.3);">
+        <div style="font-size:32px; margin-bottom:12px;">🗑️</div>
+        <h3 style="margin:0 0 8px; font-size:16px; color:white;">حذف الإشعارات</h3>
+        <p style="color:#9ca3af; font-size:13px; margin:0 0 22px; line-height:1.6;">هل تريد حذف كل الإشعارات نهائياً؟</p>
+        <div style="display:flex; gap:10px;">
+            <button id="deleteConfirmOk" style="flex:1; padding:12px; background:#ef4444; border:none; border-radius:12px; color:white; font-weight:bold; cursor:pointer; font-family:Cairo; font-size:14px;">حذف</button>
+            <button onclick="document.getElementById('deleteConfirmModal').style.display='none'" style="flex:1; padding:12px; background:#1f2937; border:none; border-radius:12px; color:white; cursor:pointer; font-family:Cairo; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

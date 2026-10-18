@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Plot | النقاش</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="shared.js"></script>
+    <style>
+        :root { --primary: #a855f7; --bg-body: #0b0f1a; --bg-card: #111827; --accent: #1f2937; --text-dim: #9ca3af; --error: #ef4444; --success: #22c55e; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg-body); color: white; padding-bottom: 120px; overflow-x: hidden; }
+        header { background: var(--bg-card); padding: 15px 5%; border-bottom: 2px solid var(--primary); display: flex; align-items: center; gap: 20px; position: sticky; top: 0; z-index: 100; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+        .main-question { background: var(--bg-card); padding: 25px; border-radius: 20px; border: 1px solid var(--primary); margin-bottom: 30px; }
+        .comment-box { background: #0f172a; padding: 15px; border-radius: 12px; border-right: 4px solid var(--primary); margin-bottom: 10px; transition: 0.3s; }
+        .nested-replies { margin-right: 20px; border-right: 1px solid var(--accent); padding-right: 15px; display: none; margin-top: 10px; }
+        .nested-replies.open { display: block; }
+        .bottom-input-container { position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+        .bottom-input { background: var(--bg-card); padding: 15px; border-top: 1px solid var(--primary); display: flex; gap: 10px; align-items: center; }
+        .bottom-input input { flex: 1; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: white; outline: none; font-size: 16px; font-family: 'Cairo'; }
+        .send-btn { background: var(--primary); border: none; padding: 12px 20px; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+        .modal { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; }
+        .modal img, .modal video { max-width: 95%; max-height: 90vh; width: auto; height: auto; border-radius: 10px; border: 2px solid var(--primary); box-shadow: 0 0 30px rgba(168, 85, 247, 0.5); }
+        .close-modal { position: absolute; top: 20px; left: 20px; color: white; font-size: 30px; cursor: pointer; }
+        .reply-box { background: var(--accent); padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+        .best-answer-box { border: 2px solid var(--success) !important; background: rgba(34, 197, 94, 0.08) !important; box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); transition: all 0.5s ease; }
+        .send-btn:active { transform: scale(0.95); }
+        .send-btn:disabled { background: var(--text-dim) !important; cursor: not-allowed; opacity: 0.7; filter: grayscale(1); }
+        @keyframes loading-spin { to { transform: rotate(360deg); } }
+        .loading-icon { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: loading-spin 0.8s linear infinite; margin-left: 8px; }
+
+        .xp-toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: linear-gradient(135deg, #a855f7, #7c3aed); color: white; padding: 10px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; font-family: 'Cairo'; box-shadow: 0 5px 20px rgba(168,85,247,0.5); z-index: 9999; opacity: 0; transition: all 0.4s ease; pointer-events: none; }
+        .xp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="index.html" style="color: var(--primary); font-size: 20px;"><i class="fas fa-arrow-right"></i></a>
+    <h3 style="margin: 0;">المناقشة</h3>
+</header>
+
+<div class="container">
+    <div id="questionArea" class="main-question"></div>
+    <div id="commentsArea"></div>
+</div>
+
+<div class="xp-toast" id="xpToast"></div>
+
+<div id="confirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:5000; align-items:center; justify-content:center; backdrop-filter:blur(4px);" onclick="closeConfirmModal()">
+    <div style="background:#111827; border:1px solid #a855f7; border-radius:20px; padding:28px 24px; width:90%; max-width:340px; text-align:center; box-shadow:0 0 30px rgba(168,85,247,0.3);" onclick="event.stopPropagation()">
+        <div id="confirmIcon" style="font-size:32px; margin-bottom:12px;"></div>
+        <h3 id="confirmTitle" style="margin:0 0 8px; font-size:16px;"></h3>
+        <p id="confirmMsg" style="color:#9ca3af; font-size:13px; margin:0 0 22px; line-height:1.6;"></p>
+        <div style="display:flex; gap:10px;">
+            <button id="confirmOkBtn" style="flex:1; padding:12px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-family:Cairo; font-size:14px;"></button>
+            <button onclick="closeConfirmModal()" style="flex:1; padding:12px; background:#1f2937; border:none; border-radius:12px; color:white; cursor:pointer; font-family:Cairo; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<div id="reportModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:5000; align-items:center; justify-content:center; backdrop-filter:blur(4px);" onclick="closeReportModal()">
+    <div style="background:#111827; border:1px solid #a855f7; border-radius:20px; padding:28px 24px; width:90%; max-width:340px; text-align:center; box-shadow:0 0 30px rgba(168,85,247,0.3);" onclick="event.stopPropagation()">
+        <div style="font-size:32px; margin-bottom:12px;">🛡️</div>
+        <h3 style="margin:0 0 8px; font-size:16px;">الإبلاغ عن محتوى مخالف</h3>
+        <p style="color:#9ca3af; font-size:13px; margin:0 0 14px; line-height:1.6;">اكتب سبب الإبلاغ:</p>
+        <input type="text" id="reportReasonInput" class="pass-input" style="width:100%; box-sizing:border-box; padding:12px; background:var(--bg-body); border:1px solid var(--accent); border-radius:10px; color:white; margin-bottom:18px; text-align:right; font-family:'Cairo';" placeholder="مثال: محتوى مسيء...">
+        <div style="display:flex; gap:10px;">
+            <button id="reportSubmitBtn" style="flex:1; padding:12px; background:var(--error); border:none; border-radius:12px; color:white; font-weight:bold; cursor:pointer; font-family:Cairo; font-size:14px;">إرسال البلاغ</button>
+            <button onclick="closeReportModal()" style="flex:1; padding:12px; background:#1f2937; border:none; border-radius:12px; color:white; cursor:pointer; font-family:Cairo; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<div id="mediaModal" class="modal" onclick="this.style.display='none'">
+    <span class="close-modal">&times;</span>
+    <div id="modalContent" onclick="event.stopPropagation()"></div>
+</div>
+
+<div class="bottom-input-container">
+    <div id="imagePreviewContainer" style="display: none; width: fit-content; margin: 0 20px -5px auto; position: relative; z-index: 10;">
+        <div style="background: var(--bg-card); border: 1px solid var(--accent); border-bottom: none; border-radius: 12px 12px 0 0; padding: 8px; position: relative;">
+            <img id="imagePreview" src="" style="max-height: 80px; max-width: 120px; width: auto; height: auto; object-fit: contain; border-radius: 8px; border: 2px solid var(--primary);">
+            <div onclick="clearImageSelection()" style="position: absolute; top: -5px; left: -5px; background: #ef4444; color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px;">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bottom-input">
+        <label for="fileInput" style="cursor:pointer; color:var(--primary); font-size:20px; padding:0 10px;">
+            <i class="fas fa-paperclip"></i>
+        </label>
+        <input type="file" id="fileInput" style="display:none;" accept="image/*,video/*">
+        <input type="text" id="mainInput" placeholder="اكتب ردك...">
+        <button class="send-btn" id="mainSendBtn">تعليق</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, collection, addDoc, query, where, serverTimestamp, deleteDoc, updateDoc, getDoc, increment, getDocs, orderBy, limit, writeBatch } from "./api-firestore.js";
+
+    const firebaseConfig = { apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw", authDomain: "gamerhub-7ca56.firebaseapp.com", projectId: "gamerhub-7ca56", appId: "1:228228967948:web:83a919fd0dfceb07aa8829" };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const qId = new URLSearchParams(window.location.search).get('id');
+
+    let userProfile = null, qData = null, allComms = [];
+    let unsubComments = null;
+    let cooldownInterval = null; 
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const snap = await getDoc(doc(db, "users", user.uid));
+
+            // ✅ إصلاح: لو تم حذف بروفايل المستخدم لكن حسابه بقي فعالاً في Auth
+            if (!snap.exists()) {
+                await signOut(auth);
+                window.location.href = "login.html";
+                return;
+            }
+
+            userProfile = snap.data();
+            startLiveUpdates();
+            checkExistingCooldown();
+        } else { window.location.href = "login.html"; }
+    });
+
+    function startLiveUpdates() {
+        if (!qId) return;
+
+        onSnapshot(doc(db, "questions", qId), (docSnap) => {
+            if (!docSnap.exists()) return;
+            qData = docSnap.data();
+            renderHeader();
+
+            if (unsubComments) unsubComments();
+
+            unsubComments = onSnapshot(
+                query(collection(db, "comments"), where("questionId", "==", qId)),
+                (comSnap) => {
+                    allComms = [];
+                    comSnap.forEach(d => allComms.push({ id: d.id, ...d.data() }));
+                    renderComments().catch(console.error);
+                }
+            );
+        });
+    }
+
+    // ✅ إصلاح: getPlayerRank أصبحت موحّدة في shared.js بدل تكرارها هنا
+
+    function showXpToast(amount, reason) {
+        const toast = document.getElementById('xpToast');
+        if (toast) {
+            toast.textContent = `+${amount} XP — ${reason}`;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+    }
+
+    function renderHeader() {
+        getDoc(doc(db, "users", qData.userId)).then(uSnap => {
+            const xp = uSnap.exists() ? (uSnap.data().xp || 0) : 0;
+            const info = getPlayerRank(xp);
+            document.getElementById('questionArea').innerHTML = `
+                <b style="color:var(--primary);">#${escapeHtml(qData.category)}</b>
+                <h1 style="margin:10px 0;">${escapeHtml(qData.title)}</h1>
+                <small style="color:var(--text-dim);">بواسطة 
+                    <a href="profile.html?id=${qData.userId}" style="color: #ffffff; text-decoration: none; font-weight: bold; border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">
+                        ${escapeHtml(qData.user)}
+                    </a> 
+                    <span style="color:${info.color}; font-weight: bold;"> [${info.rankName} LV ${info.level}]</span>
+                </small>
+            `;
+        });
+    }
+
+    const xpCache = {};
+
+    async function fetchXpBatch(userIds) {
+        const missing = userIds.filter(uid => !(uid in xpCache));
+        if (missing.length > 0) {
+            await Promise.all(missing.map(async uid => {
+                try {
+                    const snap = await getDoc(doc(db, "users", uid));
+                    xpCache[uid] = snap.exists() ? (snap.data().xp || 0) : 0;
+                } catch { xpCache[uid] = 0; }
+            }));
+        }
+    }
+
+    async function renderComments() {
+        const area = document.getElementById('commentsArea');
+
+        allComms.sort((a, b) => {
+            if (a.id === qData.bestAnswerId) return -1;
+            if (b.id === qData.bestAnswerId) return 1;
+            return (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0);
+        });
+
+        const uniqueUserIds = [...new Set(allComms.map(c => c.userId))];
+        await fetchXpBatch(uniqueUserIds);
+
+        function draw(parentId, lv = 0) {
+            const list = allComms.filter(c => c.parentId === parentId);
+            let h = `<div class="${lv > 0 ? 'nested-replies' : ''}" id="nest-${parentId}">`;
+
+            list.forEach(c => {
+                const info = getPlayerRank(xpCache[c.userId] || 0);
+                const isQuestionOwner = qData.userId === auth.currentUser.uid;
+                const isCommentOwner = c.userId === auth.currentUser.uid;
+                const isBest = qData.bestAnswerId === c.id;
+                const isTopLevel = !c.parentId || c.parentId === "null" || c.parentId === "";
+
+                let bestBtn = "";
+                if (isBest) {
+                    if (isQuestionOwner) {
+                        bestBtn = `<span onclick="removeBest()" style="cursor:pointer; color:var(--error); border:1px solid var(--error); padding:3px 8px; border-radius:5px; font-size:11px; margin-left:10px;">إلغاء أفضل رد</span>`;
+                    } else {
+                        bestBtn = `<span style="color:var(--success); font-weight:bold; font-size:12px; margin-left:10px;"><i class="fas fa-check-circle"></i> أفضل رد</span>`;
+                    }
+                } else if (isQuestionOwner && !isCommentOwner && !qData.bestAnswerId && isTopLevel) {
+                    bestBtn = `<span class="best-btn" onclick="setBest('${c.id}','${c.userName}','${c.userId}')" style="cursor:pointer; color:var(--success); border:1px solid var(--success); padding:3px 8px; border-radius:5px; font-size:11px; margin-left:10px;">اعتماد كأفضل رد</span>`;
+                }
+
+                let mediaHtml = "";
+                if (c.mediaUrl) {
+                    const style = `max-width:250px; width:100%; height:auto; border-radius:12px; border:1.5px solid var(--primary); cursor:pointer; margin-top:10px; display:block;`;
+                    if (c.mediaType === 'image') mediaHtml = `<div><img src="${c.mediaUrl}" onclick="openMedia('${c.mediaUrl}', 'image')" style="${style}"></div>`;
+                    else mediaHtml = `<div><video src="${c.mediaUrl}" onclick="openMedia('${c.mediaUrl}', 'video')" style="${style}"></video></div>`;
+                }
+
+                // ✅ إصلاح XSS: تنقية كل نص قادم من المستخدم قبل إدخاله كـ innerHTML
+                const safeUserName = escapeHtml(c.userName);
+                const safeText = escapeHtml(c.text);
+                // ✅ استخدام data-* بدل تمرير النص داخل onclick(...) لتفادي مشاكل الاقتباس/الحقن في السمة نفسها
+                const deleteBtn = isCommentOwner ? `<i class="fas fa-times" style="color:var(--error); cursor:pointer;" onclick="deleteC('${c.id}', ${isBest})"></i>` : '';
+                const reportBtn = !isCommentOwner ? `<i class="fas fa-flag" style="color:var(--text-dim); cursor:pointer; font-size:12px; margin-left:5px;" title="إبلاغ عن محتوى مخالف" onclick="reportContentFromComment('${c.id}')"></i>` : '';
+
+                h += `
+                <div style="margin-bottom:12px;">
+                    <div class="comment-box ${isBest ? 'best-answer-box' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <a href="profile.html?id=${c.userId}" style="text-decoration: none; color: var(--primary); font-weight: bold;">
+                                    <b style="font-size:13px; cursor: pointer;">${safeUserName}</b>
+                                </a>
+                                <span style="color:${info.color}; font-size:11px; font-weight:bold;"> [${info.rankName} - LV ${info.level}]</span>
+                            </div>
+                            <div style="display:flex; gap:12px; align-items:center;">
+                                ${bestBtn}
+                                ${reportBtn} 
+                                ${deleteBtn}
+                            </div>
+                        </div>
+                        <p style="margin:8px 0; font-size:14px;">${safeText}</p>
+                        ${mediaHtml}
+                        <div style="display:flex; gap:12px; font-size:11px; color:var(--text-dim); margin-top:10px;">
+                            <span style="cursor:pointer;" onclick="toggleBox('${c.id}')">رد</span>
+                            ${allComms.some(r => r.parentId === c.id) ? `<span style="cursor:pointer; color:var(--primary);" onclick="toggleNest('${c.id}')">الردود</span>` : ''}
+                        </div>
+                        <div id="box-${c.id}" class="reply-box">
+                            <input type="text" id="in-${c.id}" style="width:70%; background:var(--bg-body); border:none; padding:8px; border-radius:5px; color:white;">
+                            <button onclick="sendComment('${c.id}')" style="background:var(--primary); border:none; padding:8px 12px; border-radius:5px; color:white;">إرسال</button>
+                        </div>
+                    </div>
+                    ${draw(c.id, lv + 1)}
+                </div>`;
+            });
+            return h + "</div>";
+        }
+
+        area.innerHTML = draw(null);
+
+        const hash = window.location.hash;
+        if (hash) {
+            const el = document.querySelector(hash);
+            if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+        }
+    }
+
+    function runVisualCooldown(btn, remainingSeconds) {
+        if (cooldownInterval) clearInterval(cooldownInterval);
+        btn.disabled = true;
+        btn.innerHTML = `${remainingSeconds}ث`;
+        cooldownInterval = setInterval(() => {
+            remainingSeconds--;
+            if (remainingSeconds <= 0) {
+                clearInterval(cooldownInterval);
+                cooldownInterval = null;
+                btn.disabled = false;
+                btn.innerHTML = 'تعليق';
+            } else {
+                btn.innerHTML = `${remainingSeconds}ث`;
+            }
+        }, 1000);
+    }
+
+ window.sendComment = async (pid) => {
+        const btn = pid ? document.querySelector(`#box-${pid} button`) : document.getElementById('mainSendBtn');
+        const input = document.getElementById(pid ? 'in-' + pid : 'mainInput');
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0], txt = input.value.trim();
+
+        if (!txt && !file) return;
+
+        // 🛡️ فحص جدار الحماية الحقيقي من السيرفر لمنع تخطي الـ Cooldown بالتحديث
+        // ✅ إصلاح: الكولداون يخص التعليقات الرئيسية فقط (parentId == null)، وليس الردود
+        if (!pid) {
+            const qLast = query(collection(db, "comments"), where("questionId", "==", qId), where("userId", "==", auth.currentUser.uid), where("parentId", "==", null), orderBy("timestamp", "desc"), limit(1));
+            const snap = await getDocs(qLast);
+            if (!snap.empty) {
+                const lastDoc = snap.docs[0].data();
+                if (lastDoc.timestamp) {
+                    const diff = Date.now() - lastDoc.timestamp.toMillis();
+                    if (diff < 60000) {
+                        const remain = Math.ceil((60000 - diff) / 1000);
+                        
+                        // ✅ تشغيل مودال التنبيه الداخلي بستايل الموقع فوراً وبدون أي alert منبثق من المتصفح
+                        showConfirmModal({
+                            icon: '⏳',
+                            title: 'فترة الانتظار نشطة',
+                            msg: `على رسلك! يرجى الانتظار ${remain} ثانية قبل التعليق مجدداً لمنع التكرار.`,
+                            okLabel: 'حسناً',
+                            okColor: 'var(--primary)',
+                            onOk: () => { } // نافذة تنبيهية فقط عند الإغلاق
+                        });
+
+                        runVisualCooldown(btn, remain);
+                        return;
+                    }
+                }
+            }
+        }
+
+        const savedTxt = txt;
+        const savedFile = file;
+        input.value = "";
+        fileInput.value = "";
+        if (document.getElementById('imagePreviewContainer')) document.getElementById('imagePreviewContainer').style.display = 'none';
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="loading-icon"></span>`;
+
+        try {
+            let fileUrl = null, fileType = null;
+            if (savedFile) {
+                const formData = new FormData();
+                formData.append('file', savedFile);
+                formData.append('upload_preset', 'gamer_preset');
+                const res = await fetch('https://api.cloudinary.com/v1_1/dqsy5u786/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!data.secure_url) throw new Error("فشل رفع الملف");
+                fileUrl = data.secure_url;
+                fileType = data.resource_type;
+            }
+
+            await addDoc(collection(db, "comments"), {
+                questionId: qId,
+                parentId: pid || null,
+                text: savedTxt,
+                userName: userProfile.displayName,
+                userId: auth.currentUser.uid,
+                mediaUrl: fileUrl,
+                mediaType: fileType,
+                timestamp: serverTimestamp()
+            });
+
+            if (!pid) {
+                runVisualCooldown(btn, 60);
+                // إرسال البيانات للرادار لايف
+                await addDoc(collection(db, "active_radar"), {
+                    userId: auth.currentUser.uid,
+                    userName: userProfile.displayName,
+                    action: "نشر تعليق رئيسي ودخل فترة الانتظار",
+                    timestamp: serverTimestamp()
+                });
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = 'إرسال';
+            }
+
+            Promise.allSettled([
+                updateDoc(doc(db, "questions", qId), { lastActivity: serverTimestamp() }),
+                updateDoc(doc(db, "users", auth.currentUser.uid), { xp: increment(pid ? 2 : 5) }),
+                (!pid && qData.userId !== auth.currentUser.uid)
+                    ? addDoc(collection(db, "notifications"), {
+                        ownerId: qData.userId,
+                        type: "comment",
+                        fromUser: userProfile.displayName,
+                        questionId: qId,
+                        questionTitle: qData.title,
+                        commentId: "new",
+                        isRead: false,
+                        timestamp: serverTimestamp()
+                    })
+                    : Promise.resolve()
+            ]).then(() => {
+                userProfile.xp = (userProfile.xp || 0) + (pid ? 2 : 5);
+                showXpToast(pid ? 2 : 5, pid ? "رد على تعليق" : "إرسال تعليق");
+            });
+
+        } catch (e) {
+            console.error(e);
+            input.value = savedTxt;
+            btn.disabled = false;
+            btn.innerHTML = pid ? 'إرسال' : 'تعليق';
+            showToastMsg("فشل الإرسال، جرب مرة أخرى", "#ef4444");
+        }
+    };
+
+    let confirmCallback = null;
+
+    function showConfirmModal({ icon, title, msg, okLabel, okColor, onOk }) {
+        document.getElementById('confirmIcon').textContent = icon;
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMsg').textContent = msg;
+        const okBtn = document.getElementById('confirmOkBtn');
+        okBtn.textContent = okLabel;
+        okBtn.style.background = okColor;
+        okBtn.style.color = 'white';
+        confirmCallback = onOk;
+        okBtn.onclick = async () => {
+            closeConfirmModal();
+            await onOk();
+        };
+        document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    window.closeConfirmModal = () => {
+        document.getElementById('confirmModal').style.display = 'none';
+        confirmCallback = null;
+    };
+
+    function showToastMsg(msg, color = '#22c55e') {
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:${color};color:white;padding:10px 22px;border-radius:30px;font-size:13px;font-family:'Cairo';font-weight:bold;z-index:9999;box-shadow:0 5px 20px rgba(0,0,0,0.4);`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+
+    window.setBest = async (commentId, userName, userId) => {
+        showConfirmModal({
+            icon: '🏆',
+            title: 'اعتماد أفضل رد',
+            msg: `هل أنت متأكد من اعتماد رد "${userName}" كأفضل إجابة؟ سيحصل على 50 XP`,
+            okLabel: 'اعتماد',
+            okColor: '#22c55e',
+            onOk: async () => {
+                try {
+                    await updateDoc(doc(db, "questions", qId), {
+                        bestAnswerId: commentId,
+                        bestAnswerUserId: userId
+                    });
+                    await updateDoc(doc(db, "users", userId), { xp: increment(50) });
+                    await addDoc(collection(db, "notifications"), {
+                        ownerId: userId,
+                        type: "best_answer",
+                        fromUser: userProfile.displayName,
+                        questionId: qId,
+                        questionTitle: qData.title,
+                        commentId: commentId,
+                        isRead: false,
+                        timestamp: serverTimestamp()
+                    });
+                    showToastMsg('تم الاعتماد ومنح صاحبه 50 XP 🎉');
+                } catch (e) {
+                    console.error(e);
+                    showToastMsg('حدث خطأ، جرب مرة أخرى', '#ef4444');
+                }
+            }
+        });
+    };
+
+    window.removeBest = () => new Promise((resolve) => {
+        showConfirmModal({
+            icon: '⚖️',
+            title: 'إلغاء أفضل رد',
+            msg: 'هل تريد إلغاء الاعتماد؟ سيتم خصم 50 XP من صاحب الرد.',
+            okLabel: 'إلغاء الاعتماد',
+            okColor: '#ef4444',
+            onOk: async () => {
+                try {
+                    if (qData.bestAnswerUserId) {
+                        await updateDoc(doc(db, "users", qData.bestAnswerUserId), { xp: increment(-50) });
+                    }
+                    await updateDoc(doc(db, "questions", qId), {
+                        bestAnswerId: null,
+                        bestAnswerUserId: null
+                    });
+                    showToastMsg('تم إلغاء الاعتماد وسحب النقاط ⚖️');
+                    resolve(true);
+                } catch (e) {
+                    console.error(e);
+                    showToastMsg('حدث خطأ أثناء إلغاء الاعتماد', '#ef4444');
+                    resolve(false);
+                }
+            }
+        });
+    });
+
+    // ✅ إصلاح: جمع كل الردود المتفرعة (على كل المستويات) عن تعليق معيّن، لحذفها كاملة
+    // بدل ترك ردود يتيمة في القاعدة تختفي من الواجهة بدون حذف فعلي
+    function collectDescendantIds(rootId) {
+        const ids = [];
+        const stack = [rootId];
+        while (stack.length) {
+            const current = stack.pop();
+            allComms.filter(c => c.parentId === current).forEach(child => {
+                ids.push(child.id);
+                stack.push(child.id);
+            });
+        }
+        return ids;
+    }
+
+    window.deleteC = (cid, isBest) => {
+        const descendantIds = collectDescendantIds(cid);
+        const affectsBest = isBest || descendantIds.includes(qData.bestAnswerId);
+        const msg = descendantIds.length > 0
+            ? `سيتم حذف هذا التعليق مع ${descendantIds.length} رد متفرع عنه نهائياً${affectsBest ? '، وسيتم إلغاء اعتماد أفضل رد وخصم 50 XP من صاحبه' : ''}.`
+            : (isBest ? 'هذا الرد هو أفضل إجابة حالياً — سيتم إلغاء اعتماده وخصم 50 XP من صاحبه قبل الحذف.' : 'هل تريد حذف هذا التعليق نهائياً؟');
+
+        showConfirmModal({
+            icon: '🗑️',
+            title: 'حذف التعليق',
+            msg,
+            okLabel: 'حذف',
+            okColor: '#ef4444',
+            onOk: async () => {
+                try {
+                    if (affectsBest) {
+                        if (qData.bestAnswerUserId) {
+                            await updateDoc(doc(db, "users", qData.bestAnswerUserId), { xp: increment(-50) });
+                        }
+                        await updateDoc(doc(db, "questions", qId), {
+                            bestAnswerId: null,
+                            bestAnswerUserId: null
+                        });
+                    }
+
+                    const batch = writeBatch(db);
+                    batch.delete(doc(db, "comments", cid));
+                    descendantIds.forEach(id => batch.delete(doc(db, "comments", id)));
+                    await batch.commit();
+
+                    showToastMsg(descendantIds.length > 0 ? 'تم حذف التعليق وردوده' : 'تم حذف التعليق');
+                } catch (e) {
+                    console.error(e);
+                    showToastMsg('حدث خطأ أثناء الحذف', '#ef4444');
+                }
+            }
+        });
+    };
+
+    // ✅ إصلاح: بناء عنصر الوسائط عبر DOM API بدل تجميع HTML كنص، لتفادي أي احتمال حقن عبر الرابط
+    window.openMedia = (url, type) => {
+        const modal = document.getElementById('mediaModal');
+        const content = document.getElementById('modalContent');
+        content.innerHTML = '';
+        const el = document.createElement(type === 'image' ? 'img' : 'video');
+        el.src = url;
+        if (type !== 'image') { el.controls = true; el.autoplay = true; }
+        content.appendChild(el);
+        modal.style.display = 'flex';
+    };
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('imagePreview').src = event.target.result;
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    window.clearImageSelection = () => {
+        document.getElementById('fileInput').value = "";
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+    };
+
+    document.getElementById('mainSendBtn').onclick = () => sendComment(null);
+    window.toggleBox = (id) => { const b = document.getElementById('box-' + id); b.style.display = b.style.display === 'block' ? 'none' : 'block'; };
+    window.toggleNest = (id) => document.getElementById('nest-' + id).classList.toggle('open');
+
+    async function checkExistingCooldown() {
+        if (!qId || !auth.currentUser) return;
+        const mainBtn = document.getElementById('mainSendBtn');
+        try {
+            // ✅ إصلاح: الكولداون يخص التعليقات الرئيسية فقط (parentId == null)، وليس الردود
+            const qLast = query(collection(db, "comments"), where("questionId", "==", qId), where("userId", "==", auth.currentUser.uid), where("parentId", "==", null), orderBy("timestamp", "desc"), limit(1));
+            const snap = await getDocs(qLast);
+            if (!snap.empty) {
+                const lastDoc = snap.docs[0].data();
+                if (lastDoc.timestamp) {
+                    const diff = Date.now() - lastDoc.timestamp.toMillis();
+                    if (diff < 60000) {
+                        runVisualCooldown(mainBtn, Math.ceil((60000 - diff) / 1000));
+                    }
+                }
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    // ✅ إصلاح: استبدال prompt() الأصلي من المتصفح بمودال داخلي بنفس نمط باقي الموقع
+    let reportTargetId = null, reportTargetType = null, reportContentText = null;
+
+    window.reportContentFromComment = (cid) => {
+        const c = allComms.find(x => x.id === cid);
+        if (!c) return;
+        reportContent(cid, 'تعليق', c.text || '');
+    };
+
+    function reportContent(targetId, type, contentText) {
+        reportTargetId = targetId;
+        reportTargetType = type;
+        reportContentText = contentText;
+        document.getElementById('reportReasonInput').value = '';
+        document.getElementById('reportModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('reportReasonInput').focus(), 100);
+    }
+
+    window.closeReportModal = () => {
+        document.getElementById('reportModal').style.display = 'none';
+        reportTargetId = null; reportTargetType = null; reportContentText = null;
+    };
+
+    document.getElementById('reportSubmitBtn').onclick = async () => {
+        const reason = document.getElementById('reportReasonInput').value.trim();
+        if (!reason) {
+            document.getElementById('reportReasonInput').style.borderColor = 'var(--error)';
+            return;
+        }
+        const btn = document.getElementById('reportSubmitBtn');
+        btn.disabled = true; btn.innerText = 'جاري الإرسال...';
+        try {
+            await addDoc(collection(db, "reports"), {
+                targetId: reportTargetId, targetType: reportTargetType, reason: reason,
+                contentSnippet: (reportContentText || '').substring(0, 60),
+                reporterName: userProfile.displayName, timestamp: serverTimestamp()
+            });
+            closeReportModal();
+            showToastMsg("تم إرسال البلاغ للمشرفين بنجاح 🛡️");
+        } catch (e) {
+            console.error(e);
+            showToastMsg("حدث خطأ أثناء إرسال البلاغ", "#ef4444");
+        } finally {
+            btn.disabled = false; btn.innerText = 'إرسال البلاغ';
+        }
+    };
+</script>
+</body>
+</html>

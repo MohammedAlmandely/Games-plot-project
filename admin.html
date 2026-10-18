@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Plot | لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="shared.js"></script>
+    <style>
+        :root { --primary: #a855f7; --bg-body: #0b0f1a; --bg-card: #111827; --accent: #1f2937; --text-dim: #9ca3af; --error: #ef4444; --success: #22c55e; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg-body); color: white; padding-bottom: 50px; }
+        
+        header { background: var(--bg-card); padding: 15px 5%; border-bottom: 2px solid var(--primary); display: flex; align-items: center; justify-content: space-between; }
+        
+        .admin-container { max-width: 1200px; margin: 30px auto; padding: 0 15px; display: flex; gap: 20px; }
+        
+        .sidebar { width: 250px; background: var(--bg-card); border-radius: 15px; padding: 20px; border: 1px solid var(--accent); height: fit-content; }
+        .sidebar-btn { width: 100%; padding: 12px; background: none; border: none; color: var(--text-dim); font-family: 'Cairo'; font-size: 15px; font-weight: 600; text-align: right; cursor: pointer; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; transition: 0.3s; }
+        .sidebar-btn:hover, .sidebar-btn.active { background: var(--primary); color: white; }
+        
+        .main-content { flex: 1; background: var(--bg-card); border-radius: 15px; padding: 25px; border: 1px solid var(--accent); min-height: 500px; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #0f172a; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid var(--accent); font-size: 14px; vertical-align: middle; }
+        th { background: var(--accent); color: var(--primary); font-weight: 800; }
+        
+        .card-item { background: #0f172a; padding: 15px; border-radius: 10px; border: 1px solid var(--accent); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        input, select { background: var(--accent); border: 1px solid var(--primary); padding: 10px; border-radius: 8px; color: white; font-family: 'Cairo'; outline: none; font-size: 14px; }
+        .action-btn { padding: 6px 12px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; font-family: 'Cairo'; font-size: 12px; transition: 0.2s; }
+        .action-btn:hover { opacity: 0.8; }
+        .btn-delete { background: var(--error); }
+        .btn-success { background: var(--success); }
+        .btn-primary { background: var(--primary); }
+        
+        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .radar-pulse { width: 10px; height: 10px; background: #ef4444; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #ef4444; animation: pulse 1s infinite alternate; }
+        @keyframes pulse { to { transform: scale(1.3); opacity: 0.5; } }
+    </style>
+</head>
+<body>
+
+<div id="lockScreen">
+    <i class="fas fa-shield-alt" style="font-size: 60px; color: var(--primary); margin-bottom: 20px;"></i>
+    <h2>جاري التحقق من صلاحيات المشرف...</h2>
+</div>
+
+<!-- ================== النوافذ المنبثقة الداخلية (Modals) ================== -->
+
+<!-- 1. نافذة التأكيد العامة (بديل confirm) -->
+<div id="adminConfirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#111827; border:1px solid var(--error); border-radius:20px; padding:25px; width:90%; max-width:350px; text-align:center;">
+        <h3 id="adminConfirmTitle" style="color:var(--error); margin-top:0;">تأكيد العملية</h3>
+        <p id="adminConfirmMsg" style="color:var(--text-dim); font-size:14px; margin-bottom:20px;"></p>
+        <div style="display:flex; gap:10px;">
+            <button id="adminConfirmBtn" class="action-btn btn-delete" style="flex:1; padding:10px; font-size:14px;" onclick="executeConfirm()">تأكيد</button>
+            <button onclick="cancelConfirm()" class="action-btn" style="flex:1; background:#1f2937; padding:10px; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. نافذة إضافة تصنيف جديد (بديل prompt) -->
+<div id="newCatModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#111827; border:1px solid var(--success); border-radius:20px; padding:25px; width:90%; max-width:400px; text-align:center;">
+        <h3 style="color:var(--success); margin-top:0;"><i class="fas fa-plus-circle"></i> إضافة تصنيف جديد</h3>
+        <input type="text" id="newCatNameInput" placeholder="اسم التصنيف (مثال: أكشن)" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
+        <input type="text" id="newCatImgInput" placeholder="رابط الصورة (https://...)" style="width:100%; box-sizing:border-box; margin-bottom:20px; direction:ltr; text-align:left;">
+        <div style="display:flex; gap:10px;">
+            <button onclick="executeNewCategory()" class="action-btn btn-success" style="flex:1; padding:10px; font-size:14px;">حفظ وإضافة</button>
+            <button onclick="document.getElementById('newCatModal').style.display='none'" class="action-btn" style="flex:1; background:#1f2937; padding:10px; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. نافذة اعتماد اقتراح تصنيف (يطلب رابط الصورة) -->
+<div id="imagePromptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#111827; border:1px solid var(--primary); border-radius:20px; padding:25px; width:90%; max-width:400px; text-align:center;">
+        <h3 style="margin-top:0; color:var(--primary);"><i class="fas fa-image"></i> اعتماد صورة التصنيف</h3>
+        <p style="font-size:13px; color:var(--text-dim); margin-bottom:15px;">الرجاء إدخال رابط صورة للعبة "<b id="targetCatName" style="color:white;"></b>":</p>
+        <input type="text" id="catImgUrl" placeholder="https://example.com/image.jpg" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left; direction:ltr;">
+        <div style="display:flex; gap:10px;">
+            <button id="confirmApproveBtn" class="action-btn btn-success" style="flex:1; padding:10px; font-size:14px;" onclick="confirmApproveSuggestion()">اعتماد ونشر</button>
+            <button onclick="document.getElementById('imagePromptModal').style.display='none'" class="action-btn" style="flex:1; background:#1f2937; padding:10px; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- 4. نافذة تعديل الـ XP -->
+<div id="xpPromptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#111827; border:1px solid var(--primary); border-radius:20px; padding:25px; width:90%; max-width:350px; text-align:center;">
+        <h3 id="xpPromptTitle" style="margin-top:0; color:var(--primary);">تعديل النقاط</h3>
+        <p style="font-size:13px; color:var(--text-dim); margin-bottom:15px;">أدخل المقدار المطلوب:</p>
+        <input type="number" id="xpAmountInput" placeholder="مثال: 50" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:center; font-size:18px; font-weight:bold;">
+        <div style="display:flex; gap:10px;">
+            <button id="confirmXpBtn" class="action-btn btn-primary" style="flex:1; padding:10px; font-size:14px;" onclick="confirmModifyXP()">تأكيد العملية</button>
+            <button onclick="document.getElementById('xpPromptModal').style.display='none'" class="action-btn" style="flex:1; background:#1f2937; padding:10px; font-size:14px;">إلغاء</button>
+        </div>
+    </div>
+</div>
+<!-- ========================================================================= -->
+
+<header>
+    <h3 style="margin: 0;"><i class="fas fa-user-shield"></i> لوحة تحكم الإدارة</h3>
+    <a href="index.html" style="color: white; text-decoration: none; font-size: 14px;"><i class="fas fa-home"></i> العودة للموقع</a>
+</header>
+
+<div class="admin-container">
+    <div class="sidebar">
+        <button class="sidebar-btn active" onclick="switchTab('reports', event)"><i class="fas fa-flag"></i> قسم البلاغات</button>
+        <button class="sidebar-btn" onclick="switchTab('suggestions', event)"><i class="fas fa-lightbulb"></i> اقتراحات التصانيف</button>
+        <button class="sidebar-btn" onclick="switchTab('radar', event)"><i class="fas fa-satellite-dish"></i> رادار الأعضاء <span class="radar-pulse"></span></button>
+        <button class="sidebar-btn" onclick="switchTab('categories', event)"><i class="fas fa-tags"></i> إدارة التصانيف</button>
+        <button class="sidebar-btn" onclick="switchTab('users-manage', event)"><i class="fas fa-users-cog"></i> إدارة المستخدمين والـ XP</button>
+        <button class="sidebar-btn" onclick="switchTab('questions-manage', event)"><i class="fas fa-dumpster"></i> إدارة الأسئلة</button>
+    </div>
+
+    <div class="main-content">
+        <div id="reports" class="tab-panel active">
+            <h2><i class="fas fa-flag" style="color: var(--error);"></i> بلاغات المحتوى المخالف</h2>
+            <div id="reportsList">جاري تحميل البلاغات...</div>
+        </div>
+
+        <div id="suggestions" class="tab-panel">
+            <h2><i class="fas fa-lightbulb" style="color: #f59e0b;"></i> اقتراحات التصانيف المرسلة</h2>
+            <div id="suggestionsList">جاري تحميل الاقتراحات...</div>
+        </div>
+
+        <div id="radar" class="tab-panel">
+            <h2><i class="fas fa-satellite-dish" style="color: #ef4444;"></i> رادار رصد الأعضاء النشطين</h2>
+            <p style="font-size: 13px; color: var(--text-dim);">يظهر هنا لايف الأعضاء الذين قاموا بالتعليق ودخلوا فترة الانتظار الـ 60 ثانية حالياً:</p>
+            <table>
+                <thead>
+                    <tr><th>اسم المستخدم</th><th>نوع النشاط</th><th>الوقت لايف</th><th>الإجراء</th></tr>
+                </thead>
+                <tbody id="radarList"></tbody>
+            </table>
+        </div>
+
+        <div id="categories" class="tab-panel">
+            <h2><i class="fas fa-tags" style="color: var(--primary);"></i> إدارة التصانيف</h2>
+            <button class="action-btn btn-success" style="padding:10px 20px; margin-bottom:20px; font-size:14px;" onclick="openNewCategoryModal()"><i class="fas fa-plus"></i> إضافة تصنيف جديد</button>
+            <table id="categoriesTable">
+                <thead>
+                    <tr><th>التصنيف</th><th>الإجراءات</th></tr>
+                </thead>
+                <tbody id="categoriesList"></tbody>
+            </table>
+        </div>
+
+        <div id="users-manage" class="tab-panel">
+            <h2><i class="fas fa-users-cog"></i> التحكم بالحسابات ونقاط الـ XP</h2>
+            <table id="usersTable">
+                <thead>
+                    <tr><th>المستخدم</th><th>البريد</th><th>الـ XP الحالي</th><th>تعديل الـ XP</th><th>الصلاحية</th><th>حذف</th></tr>
+                </thead>
+                <tbody id="usersList"></tbody>
+            </table>
+        </div>
+
+        <div id="questions-manage" class="tab-panel">
+            <h2><i class="fas fa-dumpster"></i> الرقابة وحذف الأسئلة</h2>
+            <div id="questionsList">جاري تحميل الأسئلة الحالية...</div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, collection, onSnapshot, getDoc, updateDoc, deleteDoc, setDoc, increment, query, orderBy, getDocs, where, writeBatch } from "./api-firestore.js";
+
+    const firebaseConfig = { apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw", authDomain: "gamerhub-7ca56.firebaseapp.com", projectId: "gamerhub-7ca56", appId: "1:228228967948:web:83a919fd0dfceb07aa8829" };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let isSuperAdmin = false;
+    const suggestionsCache = {}; // ✅ id -> catName، لتفادي تمرير نص المستخدم داخل onclick(...)
+
+    // --- نظام الإشعارات (Toast) بديل Alert ---
+    window.showToastMsg = (msg, color = 'var(--success)') => {
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:${color};color:white;padding:10px 22px;border-radius:30px;font-size:14px;font-family:'Cairo';font-weight:bold;z-index:10000;box-shadow:0 5px 20px rgba(0,0,0,0.4);`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    };
+
+    // --- نظام التأكيد الموحد (بديل Confirm) ---
+    let confirmAction = null;
+    let cancelAction = null;
+
+    window.showConfirmModal = (title, msg, onConfirm, onCancel = null) => {
+        document.getElementById('adminConfirmTitle').innerText = title;
+        document.getElementById('adminConfirmMsg').innerText = msg;
+        confirmAction = onConfirm;
+        cancelAction = onCancel;
+        document.getElementById('adminConfirmModal').style.display = 'flex';
+    };
+
+    window.executeConfirm = async () => {
+        document.getElementById('adminConfirmModal').style.display = 'none';
+        if (confirmAction) await confirmAction();
+        confirmAction = null;
+        cancelAction = null;
+    };
+
+    window.cancelConfirm = () => {
+        document.getElementById('adminConfirmModal').style.display = 'none';
+        if (cancelAction) cancelAction();
+        confirmAction = null;
+        cancelAction = null;
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const uRole = userDoc.data().role;
+                if (uRole === "admin" || uRole === "super_admin") {
+                    document.getElementById('lockScreen').style.display = "none";
+                    if (uRole === "super_admin") isSuperAdmin = true;
+                    loadAdminConsoleData();
+                } else {
+                    window.location.href = "index.html";
+                }
+            } else { window.location.href = "index.html"; }
+        } else { window.location.href = "login.html"; }
+    });
+
+    // ✅ إصلاح: تمرير event صراحة بدل الاعتماد على المتغيّر الضمني window.event (غير موثوق في كل المتصفحات)
+    window.switchTab = (tabId, evt) => {
+        document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+    };
+
+    function loadAdminConsoleData() {
+        // 1. البلاغات
+        onSnapshot(collection(db, "reports"), (snap) => {
+            const list = document.getElementById('reportsList');
+            if(snap.empty) { list.innerHTML = "<p style='color:var(--success)'>لا توجد بلاغات حالياً. الموقع نظيف! ✨</p>"; return; }
+            let h = "";
+            snap.forEach(d => {
+                const r = d.data();
+                // ✅ إصلاح XSS: تنقية كل حقل قادم من مستخدمين قبل عرضه في لوحة الإدارة
+                h += `<div class="card-item">
+                    <div><b>المبلغ عنه:</b> ${escapeHtml(r.targetType)} | <b>السبب:</b> <span style="color:var(--error); font-weight:bold;">${escapeHtml(r.reason)}</span> <br>
+                    <small style="color:var(--text-dim)">النص: "${escapeHtml(r.contentSnippet || '')}"</small><br>
+                    <small>بواسطة: ${escapeHtml(r.reporterName)}</small></div>
+                    <div>
+                        <button class="action-btn btn-delete" onclick="deleteReport('${d.id}')"><i class="fas fa-check"></i> شطب البلاغ</button>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = h;
+        });
+
+        // 2. الاقتراحات
+        onSnapshot(collection(db, "suggestions"), (snap) => {
+            const list = document.getElementById('suggestionsList');
+            if(snap.empty) { list.innerHTML = "<p>لا توجد اقتراحات تصانيف جديدة.</p>"; return; }
+            let h = "";
+            snap.forEach(d => {
+                const s = d.data();
+                // ✅ إصلاح XSS: تنقية النصوص + تخزين catName في cache بدل تمريره داخل onclick(...) مباشرة
+                suggestionsCache[d.id] = s.catName;
+                h += `<div class="card-item">
+                    <div><b>التصنيف المقترح:</b> ${escapeHtml(s.catName)} <br><small>المقترح: ${escapeHtml(s.userName)}</small></div>
+                    <button class="action-btn btn-success" onclick="openApproveModal('${d.id}')"><i class="fas fa-check-circle"></i> اعتماد التصنيف</button>
+                </div>`;
+            });
+            list.innerHTML = h;
+        });
+
+        // 3. الرادار
+        onSnapshot(query(collection(db, "active_radar"), orderBy("timestamp", "desc")), (snap) => {
+            const list = document.getElementById('radarList');
+            if(snap.empty) { list.innerHTML = "<tr><td colspan='4' style='text-align:center; color:var(--text-dim)'>لا يوجد نشاط مسجل حالياً.</td></tr>"; return; }
+            let h = "";
+            snap.forEach(d => {
+                const r = d.data();
+                const timeStr = r.timestamp ? new Date(r.timestamp.toMillis()).toLocaleTimeString('ar-EG') : 'الآن';
+                h += `<tr>
+                    <td><b>${escapeHtml(r.userName)}</b></td>
+                    <td><span style="color:var(--success)">${escapeHtml(r.action)}</span></td>
+                    <td>${timeStr}</td>
+                    <td><button class="action-btn btn-primary" onclick="window.location.href='profile.html?id=${r.userId}'">البروفايل</button></td>
+                </tr>`;
+            });
+            list.innerHTML = h;
+        });
+
+        // 4. التصانيف 
+        onSnapshot(collection(db, "categories"), (snap) => {
+            const list = document.getElementById('categoriesList');
+            let h = "";
+            snap.forEach(d => {
+                const c = d.data();
+                const imgSrc = c.img ? c.img : 'https://via.placeholder.com/40';
+                h += `<tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <img src="${imgSrc}" style="width:36px; height:36px; border-radius:8px; object-fit:cover; border:2px solid var(--primary);">
+                            <b>${escapeHtml(c.name)}</b>
+                        </div>
+                    </td>
+                    <td><button class="action-btn btn-delete" onclick="deleteCategory('${d.id}')"><i class="fas fa-trash"></i> حذف</button></td>
+                </tr>`;
+            });
+            list.innerHTML = h;
+        });
+
+        // 5. إدارة المستخدمين
+        onSnapshot(collection(db, "users"), (snap) => {
+            const list = document.getElementById('usersList');
+            let h = "";
+            snap.forEach(d => {
+                const u = d.data();
+                let roleSelectHTML = isSuperAdmin ? `
+                    <select data-original="${u.role || 'user'}" onchange="updateRole(this, '${d.id}')" style="padding:4px; background:var(--accent); color:white; border:1px solid var(--primary); border-radius:5px;">
+                        <option value="user" ${u.role === 'user' || !u.role ? 'selected' : ''}>عضو</option>
+                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>مشرف</option>
+                        <option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>مالك</option>
+                    </select>` : `<span style="font-size:13px; color:var(--text-dim); font-weight:bold;">${u.role === 'admin' ? 'مشرف' : u.role === 'super_admin' ? 'المالك' : 'عضو'}</span>`;
+
+                h += `<tr>
+                    <td>${escapeHtml(u.displayName || 'بدون اسم')}</td>
+                    <td>${escapeHtml(u.email || 'مخفي')}</td>
+                    <td><b>${u.xp || 0}</b></td>
+                    <td>
+                        <div style="display:flex; gap:5px; justify-content:flex-end;">
+                            <button class="action-btn btn-success" onclick="openXpModal('${d.id}', true)" title="إضافة XP"><i class="fas fa-plus"></i></button>
+                            <button class="action-btn btn-delete" onclick="openXpModal('${d.id}', false)" title="خصم XP"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </td>
+                    <td>${roleSelectHTML}</td>
+                    <td><button class="action-btn btn-delete" onclick="deleteUserAccount('${d.id}')"><i class="fas fa-user-times"></i></button></td>
+                </tr>`;
+            });
+            list.innerHTML = h;
+        });
+
+        // 6. الأسئلة
+        onSnapshot(collection(db, "questions"), (snap) => {
+            const list = document.getElementById('questionsList');
+            let h = "";
+            snap.forEach(d => {
+                const q = d.data();
+                h += `<div class="card-item">
+                    <div><b>[#${escapeHtml(q.category)}]</b> ${escapeHtml(q.title)} <br><small>الكاتب: ${escapeHtml(q.user)}</small></div>
+                    <button class="action-btn btn-delete" onclick="adminDeleteQuestion('${d.id}')"><i class="fas fa-trash"></i> حذف</button>
+                </div>`;
+            });
+            list.innerHTML = h;
+        });
+    }
+
+    // --- العمليات التي تم تحويلها للنظام الداخلي ---
+
+    // حذف بلاغ
+    window.deleteReport = (id) => {
+        showConfirmModal("شطب البلاغ", "هل أنت متأكد من شطب هذا البلاغ وإزالته من القائمة؟", async () => {
+            await deleteDoc(doc(db, "reports", id));
+            showToastMsg("تم شطب البلاغ بنجاح");
+        });
+    };
+
+    // حذف تصنيف
+    window.deleteCategory = (id) => {
+        showConfirmModal("حذف التصنيف", "هل أنت متأكد من حذف هذا التصنيف نهائياً؟", async () => {
+            await deleteDoc(doc(db, "categories", id));
+            showToastMsg("تم حذف التصنيف بنجاح");
+        });
+    };
+
+    // إضافة تصنيف جديد
+    window.openNewCategoryModal = () => {
+        document.getElementById('newCatNameInput').value = '';
+        document.getElementById('newCatImgInput').value = '';
+        document.getElementById('newCatModal').style.display = 'flex';
+    };
+
+    window.executeNewCategory = async () => {
+        const name = document.getElementById('newCatNameInput').value.trim();
+        const imgUrl = document.getElementById('newCatImgInput').value.trim();
+        if(!name || !imgUrl) return showToastMsg("الرجاء إدخال الاسم والرابط", "var(--error)");
+
+        try {
+            await setDoc(doc(collection(db, "categories")), { name: name, img: imgUrl, count: 0 });
+            document.getElementById('newCatModal').style.display = 'none';
+            showToastMsg("تمت إضافة التصنيف بنجاح");
+        } catch(e) { console.error(e); }
+    };
+
+    // حذف حساب
+    // ✅ إصلاح: حذف بيانات المستخدم كاملة من Firestore (أسئلته، تعليقاته، إشعاراته) بدل ترك بيانات يتيمة.
+    // ⚠️ ملاحظة مهمة: حذف حساب الدخول (Firebase Auth) نفسه لمستخدم آخر لا يمكن عمله من كود العميل (client SDK) —
+    // هذا يتطلب Cloud Function بصلاحيات Admin SDK. بدون ذلك سيبقى بإمكان الشخص تسجيل الدخول لكن بدون بروفايل،
+    // وقد تمت إضافة حماية في باقي الصفحات (index.html/question.html) لهذه الحالة.
+    window.deleteUserAccount = (userId) => {
+        showConfirmModal("حذف المستخدم", "⚠️ خطر! سيتم حذف الحساب وأسئلته وتعليقاته وإشعاراته بالكامل من قاعدة البيانات. هل أنت متأكد؟", async () => {
+            try {
+                const batch = writeBatch(db);
+
+                const userQuestions = await getDocs(query(collection(db, "questions"), where("userId", "==", userId)));
+                userQuestions.forEach(q => batch.delete(q.ref));
+
+                const userComments = await getDocs(query(collection(db, "comments"), where("userId", "==", userId)));
+                userComments.forEach(c => batch.delete(c.ref));
+
+                const userNotifs = await getDocs(query(collection(db, "notifications"), where("ownerId", "==", userId)));
+                userNotifs.forEach(n => batch.delete(n.ref));
+
+                batch.delete(doc(db, "users", userId));
+                await batch.commit();
+
+                showToastMsg("تم حذف المستخدم وبياناته من النظام 🗑️");
+            } catch (e) {
+                console.error(e);
+                showToastMsg("حدث خطأ أثناء الحذف", "var(--error)");
+            }
+        });
+    };
+
+    // تعديل الصلاحية (مع التراجع عند الإلغاء)
+    window.updateRole = (selectEl, userId) => {
+        const newRole = selectEl.value;
+        const oldRole = selectEl.getAttribute('data-original');
+        
+        showConfirmModal("تعديل الصلاحية", "هل تريد حفظ الصلاحية الجديدة لهذا المستخدم؟", async () => {
+            try {
+                await updateDoc(doc(db, "users", userId), { role: newRole });
+                selectEl.setAttribute('data-original', newRole);
+                showToastMsg("تم تحديث الصلاحية بنجاح");
+            } catch(e) {
+                showToastMsg("حدث خطأ", "var(--error)");
+                selectEl.value = oldRole; 
+            }
+        }, () => {
+            selectEl.value = oldRole; 
+        });
+    };
+
+    // حذف سؤال
+    // ✅ إصلاح: حذف شامل (Cascade) للتعليقات والإشعارات المرتبطة، وتحديث عدّاد التصنيف الصحيح —
+    // بدل حذف مستند السؤال فقط وترك بيانات يتيمة
+    window.adminDeleteQuestion = (qId) => {
+        showConfirmModal("حذف السؤال", "سيتم حذف السؤال وكل تعليقاته وإشعاراته نهائياً. هل تريد المتابعة؟", async () => {
+            try {
+                const qRef = doc(db, "questions", qId);
+                const qSnap = await getDoc(qRef);
+                if (!qSnap.exists()) { showToastMsg("السؤال غير موجود بالفعل", "var(--error)"); return; }
+                const qData = qSnap.data();
+
+                const batch = writeBatch(db);
+                const coms = await getDocs(query(collection(db, "comments"), where("questionId", "==", qId)));
+                coms.forEach(c => batch.delete(c.ref));
+                const notifs = await getDocs(query(collection(db, "notifications"), where("questionId", "==", qId)));
+                notifs.forEach(n => batch.delete(n.ref));
+                batch.delete(qRef);
+                await batch.commit();
+
+                // تحديث عدّاد التصنيف عبر إيجاد معرّفه الحقيقي من اسمه
+                if (qData.category) {
+                    const catSnap = await getDocs(query(collection(db, "categories"), where("name", "==", qData.category)));
+                    if (!catSnap.empty) {
+                        await updateDoc(doc(db, "categories", catSnap.docs[0].id), { count: increment(-1) }).catch(console.error);
+                    }
+                }
+
+                showToastMsg("تم حذف السؤال بنجاح");
+            } catch (e) {
+                console.error(e);
+                showToastMsg("حدث خطأ أثناء الحذف", "var(--error)");
+            }
+        });
+    };
+
+    // --- نظام الاقتراحات ---
+    let currentSuggestionId = null;
+    let currentSuggestionCatName = null;
+
+    window.openApproveModal = (sId) => {
+        currentSuggestionId = sId;
+        currentSuggestionCatName = suggestionsCache[sId] || '';
+        document.getElementById('targetCatName').innerText = currentSuggestionCatName; // innerText = آمن تلقائياً
+        document.getElementById('catImgUrl').value = '';
+        document.getElementById('imagePromptModal').style.display = 'flex';
+    };
+
+    window.confirmApproveSuggestion = async () => {
+        const imgUrl = document.getElementById('catImgUrl').value.trim();
+        if(!imgUrl) return showToastMsg("الرجاء إدخال رابط الصورة!", "var(--error)");
+        
+        const btn = document.getElementById('confirmApproveBtn');
+        btn.disabled = true; btn.innerText = 'جاري النشر...';
+        try {
+            await setDoc(doc(collection(db, "categories")), { name: currentSuggestionCatName, img: imgUrl, count: 0 });
+            await deleteDoc(doc(db, "suggestions", currentSuggestionId));
+            document.getElementById('imagePromptModal').style.display = 'none';
+            showToastMsg("تم اعتماد التصنيف ونشره بنجاح!");
+        } catch(e) { console.error(e); showToastMsg("خطأ في الاعتماد", "var(--error)"); }
+        btn.disabled = false; btn.innerText = 'اعتماد ونشر';
+    };
+
+    // --- نظام الـ XP والمودال ---
+    let currentXpUserId = null;
+    let isAddingXp = true;
+
+    window.openXpModal = (userId, isAdd) => {
+        currentXpUserId = userId;
+        isAddingXp = isAdd;
+        document.getElementById('xpPromptTitle').innerText = isAdd ? 'إضافة XP' : 'خصم XP';
+        document.getElementById('xpAmountInput').value = '';
+        document.getElementById('xpPromptModal').style.display = 'flex';
+    };
+
+    window.confirmModifyXP = async () => {
+        const amt = parseInt(document.getElementById('xpAmountInput').value);
+        if(!amt || amt <= 0) return showToastMsg("الرجاء إدخال مقدار صحيح", "var(--error)");
+        
+        const btn = document.getElementById('confirmXpBtn');
+        btn.disabled = true;
+        try {
+            const finalAmt = isAddingXp ? amt : -amt;
+            await updateDoc(doc(db, "users", currentXpUserId), { xp: increment(finalAmt) });
+            document.getElementById('xpPromptModal').style.display = 'none';
+            showToastMsg("تم تعديل الـ XP بنجاح");
+        } catch(e) { console.error(e); showToastMsg("حدث خطأ", "var(--error)"); }
+        btn.disabled = false;
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Plot | الرئيسية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="shared.js"></script>
+    <style>
+        :root {
+            --primary: #a855f7; --primary-glow: rgba(168, 85, 247, 0.6);
+            --bg-body: #0b0f1a; --bg-card: #111827; --accent: #1f2937;
+            --text-main: #ffffff; --text-dim: #9ca3af;
+            --upvote: #22c55e; --downvote: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body.stop-scrolling { overflow: hidden !important; }
+        body { background: var(--bg-body); color: var(--text-main); font-family: 'Cairo', sans-serif; overflow-x: hidden; }
+        header { background: rgba(17, 24, 39, 0.98); padding: 0 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 1000; height: 75px; }
+        .nav-controls { display: flex; align-items: center; gap: 25px; }
+        .menu-icon { font-size: 26px; cursor: pointer; color: var(--primary); transition: 0.3s ease; padding: 5px; z-index: 1100; }
+        .menu-icon:hover { transform: scale(1.1); color: white; }
+        .user-profile-trigger { display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; background: var(--accent); padding: 6px 15px; border-radius: 15px; border: 1px solid rgba(168, 85, 247, 0.3); transition: 0.3s; }
+        .user-profile-trigger:hover { transform: translateY(-2px); border-color: var(--primary); }
+        .sidebar { position: fixed; right: -300px; top: 75px; width: 280px; height: 100vh; background: var(--bg-card); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 900; border-left: 2px solid var(--primary); overflow-y: auto; }
+        .sidebar.active { right: 0; box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
+        .sidebar-list li { transition: 0.3s; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; padding-left: 15px; }
+        .sidebar-list li:hover { background: var(--accent); padding-right: 8px; }
+        .sidebar-list li a { padding: 15px 25px; display: flex; align-items: center; gap: 12px; color: white; text-decoration: none; cursor: pointer; flex: 1; }
+        .sidebar-fav-btn { cursor: pointer; color: var(--text-dim); transition: 0.2s; }
+        .sidebar-fav-btn.active { color: #fbbf24; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 10px 15px 20px; }
+        .categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .cat-card { position: relative; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 2px solid var(--accent); transition: 0.3s; aspect-ratio: 2 / 3; }
+        .cat-card:hover { transform: scale(1.05); border-color: var(--primary); box-shadow: 0 0 15px var(--primary-glow); }
+        .cat-card.active-filter { border-color: var(--primary) !important; box-shadow: 0 0 18px var(--primary-glow), 0 0 35px rgba(168,85,247,0.3) !important; transform: scale(1.05); }
+        .cat-card.active-filter .cat-info { background: rgba(168,85,247,0.35); }
+        .cat-img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+        .cat-info { position: absolute; bottom: 0; width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); text-align: center; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .cat-info b { color: var(--primary); font-weight: 800; }
+        .fav-star { position: absolute; top: 8px; right: 8px; font-size: 18px; z-index: 20; cursor: pointer; color: rgba(255,255,255,0.4); text-shadow: 0 0 5px #000; transition: 0.3s; }
+        .fav-star.active { color: #fbbf24; text-shadow: 0 0 8px #fbbf24; }
+        .question-card { background: var(--bg-card); padding: 15px; border-radius: 15px; margin-bottom: 12px; border: 1px solid var(--accent); display: flex; align-items: center; transition: 0.3s ease; }
+        .question-card:hover { border-color: var(--primary); transform: translateY(-3px); background: #1a2233; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .q-content { flex: 1; padding-left: 10px; cursor: pointer; }
+        .q-stats { display: flex; flex-direction: column; align-items: center; background: var(--accent); padding: 8px; border-radius: 12px; min-width: 55px; gap: 4px; }
+        .vote-btn { cursor: pointer; font-size: 18px; color: var(--text-dim); transition: 0.2s; }
+        .vote-btn:hover { transform: scale(1.2); }
+        .voted-up { color: var(--upvote) !important; filter: drop-shadow(0 0 5px var(--upvote)); }
+        .voted-down { color: var(--downvote) !important; filter: drop-shadow(0 0 5px var(--downvote)); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 3000; }
+        .modal-content { background: var(--bg-card); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--primary); }
+        .modal-input { width: 100%; padding: 12px; margin-bottom: 12px; background: var(--accent); border: 1px solid #374151; border-radius: 10px; color: white; font-family: 'Cairo'; outline: none; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; z-index: 800; }
+        .confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 5000; backdrop-filter: blur(4px); }
+        .fab-btn { position: fixed; bottom: 25px; left: 25px; width: 55px; height: 55px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; cursor: pointer; box-shadow: 0 5px 15px var(--primary-glow); z-index: 100; transition: 0.3s; }
+        .fab-btn:hover { transform: scale(1.1) rotate(90deg); }
+
+        /* إشعار XP */
+        .xp-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: linear-gradient(135deg, #a855f7, #7c3aed); color: white; padding: 10px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; font-family: 'Cairo'; box-shadow: 0 5px 20px rgba(168,85,247,0.5); z-index: 9999; opacity: 0; transition: all 0.4s ease; pointer-events: none; }
+        .xp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+<div class="xp-toast" id="xpToast"></div>
+
+<div id="postModal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="color:var(--primary); text-align:center; margin-bottom:15px;">سؤال جديد</h2>
+        <input type="text" id="qTitle" class="modal-input" placeholder="عنوان السؤال (10-200 حرف)">
+        <div id="warningMsg" style="color: #ef4444; font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none; text-align: right; font-weight: 600;"></div>
+        <select id="qCategory" class="modal-input"></select>
+        <button id="publishBtn" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">نشر</button>
+        <button onclick="closeAll()" style="width:100%; background:none; border:none; color:var(--text-dim); margin-top:10px; cursor:pointer;">إلغاء</button>
+    </div>
+</div>
+
+<div id="quickDeleteModal" class="confirm-modal">
+    <div style="background:var(--bg-card); padding:25px; border-radius:20px; border:1px solid var(--primary); width:90%; max-width:350px; text-align:center;">
+        <i class="fas fa-trash-alt fa-2x" style="color: var(--downvote); margin-bottom:15px;"></i>
+        <h3>حذف السؤال؟</h3>
+        <p style="color:var(--text-dim); font-size:13px; margin-top:8px;">سيتم حذف السؤال وجميع تعليقاته وإشعاراته</p>
+        <div style="display:flex; gap:10px; margin-top:25px;">
+            <button id="finalConfirmBtn" style="flex:1; padding:12px; background:var(--downvote); border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer;">حذف</button>
+            <button onclick="closeQuickDelete()" style="flex:1; padding:12px; background:var(--accent); border:none; border-radius:10px; color:white; cursor:pointer;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+    <div class="nav-controls" style="display: flex; align-items: center; gap: 15px;">
+        <i class="fas fa-bars menu-icon" onclick="toggleSidebar()"></i>
+        <div style="position: relative; cursor: pointer; display: flex; align-items: center;" onclick="window.location.href='notifications.html'">
+            <i class="fas fa-bell" style="font-size: 20px; color: var(--text-dim); transition: 0.3s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-dim)'"></i>
+            <div id="notifBadge" style="display: none; position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-body);"></div>
+        </div>
+        <a href="profile.html" class="user-profile-trigger" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
+            <span id="navUserName">جاري..</span>
+            <img src="https://via.placeholder.com/150" id="navUserAvatar" style="width:34px; height:34px; border-radius:50%; border:2px solid var(--primary); object-fit: cover;">
+        </a>
+    </div>
+    <div class="logo-area" onclick="location.reload()" style="cursor: pointer; display: flex; align-items: center;">
+        <img src="logo.png" alt="Games Plot" style="height: 35px; filter: drop-shadow(0 0 5px var(--primary-glow));">
+    </div>
+</header>
+
+<nav class="sidebar" id="sidebar">
+    <ul class="sidebar-list">
+        <li><a href="profile.html"><i class="fas fa-user-circle"></i> ملفي الشخصي</a></li>
+        <li><a onclick="location.reload()"><i class="fas fa-home"></i> الرئيسية</a></li>
+        <li><a onclick="filterMyQuestions()"><i class="fas fa-user-edit"></i> أسئلتي المنشورة</a></li>
+        <hr style="border:0; border-top:1px solid var(--accent); margin:10px 0;">
+        <div id="sidebar-categories"></div>
+    </ul>
+</nav>
+
+<div class="container">
+    <div class="section-row">
+        <div class="row-title" style="margin-top:10px; color:var(--primary); font-weight:800; margin-bottom:15px;"><i class="fas fa-star"></i> مفضلاتي</div>
+        <div class="categories-grid" id="favorites-row"></div>
+    </div>
+    <div class="section-row">
+        <div class="row-title" style="color:var(--primary); font-weight:800; margin-bottom:15px;"><i class="fas fa-bolt"></i> ألعاب الترند</div>
+        <div class="categories-grid" id="trending-row"></div>
+        <div id="suggestionBox" style="margin-top: 15px; padding: 12px; background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--primary); text-align: center; max-width: 400px; margin-right: auto; margin-left: auto;">
+            <h5 style="color: var(--primary); margin: 0 0 5px 0; font-size: 14px;">لم تجد لعبتك المفضلة؟</h5>
+            <p style="font-size: 11px; color: var(--text-dim); margin-bottom: 10px;">اقترح تصنيفاً جديداً</p>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="newCatInput" placeholder="اسم اللعبة..." style="flex: 1; padding: 6px 10px; border-radius: 8px; background: var(--accent); color: white; border: 1px solid #374151; outline: none; font-family: 'Cairo'; font-size: 12px;">
+                <button onclick="sendSuggestion()" style="background: var(--primary); color: white; border: none; padding: 6px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Cairo'; font-size: 12px;">إرسال</button>
+            </div>
+        </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
+        <h2 style="font-size:18px; color:var(--primary);" id="questionsHeader">اكتشاف عشوائي</h2>
+        <select id="sortType" style="background:var(--accent); color:white; border:1px solid var(--primary); padding:5px; border-radius:8px; font-family:'Cairo';">
+            <option value="famous">الأشهر</option>
+            <option value="newest">الأحدث</option>
+        </select>
+    </div>
+    <div id="trending-questions" style="margin-top:20px;"></div>
+</div>
+
+<div class="fab-btn" onclick="openPostModal()"><i class="fas fa-plus"></i></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, query, addDoc, doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, where, onSnapshot, writeBatch } from "./api-firestore.js";
+    const firebaseConfig = { apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw", authDomain: "gamerhub-7ca56.firebaseapp.com", projectId: "gamerhub-7ca56", appId: "1:228228967948:web:83a919fd0dfceb07aa8829" };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let allQuestions = [], allCategories = [], currentCategory = 'all', userData = null, questionIdToDelete = null;
+
+    // ✅ إصلاح: تتبع التصويتات في Firestore بدل localStorage وحده
+    // votes تُخزَّن في localStorage للسرعة، لكن Firestore هو المرجع الحقيقي
+    // الفرق: نحفظ الحالة السابقة ونحسب الـ delta الصحيح
+    const localVotes = JSON.parse(localStorage.getItem('myVotes_sql_v1') || '{}');
+
+    function showXpToast(amount, reason) {
+        const toast = document.getElementById('xpToast');
+        toast.textContent = `+${amount} XP — ${reason}`;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function showToast(msg, color = '#a855f7') {
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:${color};color:white;padding:10px 22px;border-radius:30px;font-size:13px;font-family:'Cairo';font-weight:bold;z-index:9999;box-shadow:0 5px 20px rgba(0,0,0,0.4);transition:opacity 0.4s;`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const snap = await getDoc(doc(db, "users", user.uid));
+
+            // ✅ إصلاح: لو تم حذف بروفايل المستخدم (مثلاً من لوحة الإدارة) لكن حسابه بقي فعالاً في Auth
+          if (!snap.exists()) {
+    await setDoc(doc(db, "users", user.uid), {
+        displayName: user.displayName || user.email?.split('@')[0] || "عضو",
+        email: user.email || "",
+        photoURL: user.photoURL || null,
+        username: (user.email?.split('@')[0] || "user") + Math.floor(Math.random() * 10000),
+        xp: 0,
+        createdAt: new Date()
+    });
+
+    snap = await getDoc(doc(db, "users", user.uid));
+}
+
+            userData = snap.data();
+            document.getElementById('navUserName').innerText = userData.displayName || "بدون اسم";
+            if (userData.photoURL) document.getElementById('navUserAvatar').src = userData.photoURL;
+            loadAllData();
+            startNotificationListener();
+        } else { window.location.href = "login.html"; }
+    });
+
+    async function loadAllData() {
+        try {
+            const catSnap = await getDocs(collection(db, "categories"));
+            allCategories = [];
+            let catOpts = '<option value="">اختر اللعبة (اختياري)</option>';
+            catSnap.forEach(d => {
+                const data = d.data();
+                allCategories.push({ id: d.id, ...data });
+                catOpts += `<option value="${data.name}">${data.name}</option>`;
+            });
+            document.getElementById('qCategory').innerHTML = catOpts;
+            renderUI();
+
+            const qSnap = await getDocs(collection(db, "questions"));
+            allQuestions = [];
+            qSnap.forEach(d => {
+                const data = d.data();
+                const qDate = data.timestamp ? data.timestamp.toDate() : new Date();
+                allQuestions.push({ id: d.id, ...data, dateObject: qDate });
+            });
+            sortAndRender();
+        } catch (e) {
+            console.error("خطأ في جلب البيانات:", e);
+        }
+    }
+
+    // ✅ إصلاح: التصنيفات مخزّنة بمعرّف تلقائي (auto-id)، وليس باسم التصنيف كمعرّف.
+    // هذه الدالة تجيب المعرّف الحقيقي للتصنيف من اسمه بدل استخدام الاسم مباشرة كـ document id
+    // (كان هذا يسبب فشل تحديث العدّاد أو إنشاء مستند "شبح" منفصل بنفس اسم التصنيف)
+    async function getCategoryRefByName(name) {
+        if (!name) return null;
+        const cached = allCategories.find(c => c.name === name);
+        if (cached) return doc(db, "categories", cached.id);
+
+        const snap = await getDocs(query(collection(db, "categories"), where("name", "==", name)));
+        if (!snap.empty) return doc(db, "categories", snap.docs[0].id);
+        return null; // التصنيف غير موجود فعلياً (مثلاً "عام" الافتراضي)
+    }
+
+    function formatGameTime(timestamp) {
+        if (!timestamp) return "منذ لحظات";
+        const now = new Date();
+        const date = (timestamp instanceof Date) ? timestamp : (timestamp.toDate ? timestamp.toDate() : new Date(timestamp));
+        const diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return "الآن";
+        if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
+        if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
+        return date.toLocaleDateString('ar-SA');
+    }
+
+    window.toggleSidebar = () => {
+        const s = document.getElementById('sidebar'), o = document.getElementById('overlay');
+        if (!s.classList.contains('active')) { s.classList.add('active'); o.style.display = 'block'; document.body.classList.add('stop-scrolling'); }
+        else closeAll();
+    };
+
+    window.closeAll = () => {
+        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('postModal').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        document.body.classList.remove('stop-scrolling');
+    };
+
+    window.openPostModal = () => {
+        document.getElementById('postModal').style.display = 'flex';
+        document.getElementById('overlay').style.display = 'block';
+        document.body.classList.add('stop-scrolling');
+    };
+
+    function renderUI() {
+        let trendingHTML = "", sidebarHTML = "";
+        let favHTML = `<div class="cat-card ${currentCategory==='all'?'active-filter':''}" onclick="showAllRandomly()"><div style="height:100%; background:linear-gradient(135deg, #1a1e2e, #111827); display:flex; align-items:center; justify-content:center; color:var(--primary);"><i class="fas fa-dice fa-2x"></i></div><div class="cat-info"><b>الكل</b></div></div>`;
+
+        // ✅ إصلاح: ترتيب "ألعاب الترند" فعلياً حسب عدد الأسئلة (count) بدل ترتيب استرجاع Firestore العشوائي
+        const byTrend = [...allCategories].sort((a, b) => (b.count || 0) - (a.count || 0));
+
+        allCategories.forEach((cat) => {
+            const isFav = userData.favorites?.includes(cat.name);
+            const activeCls = (currentCategory === cat.name) ? 'active-filter' : '';
+            const safeName = escapeHtml(cat.name);
+            if (isFav) favHTML += `<div class="cat-card ${activeCls}"><i class="fas fa-star fav-star active" onclick="toggleFavorite('${safeName}', event)"></i><img src="${cat.img}" class="cat-img" onclick="filterQuestions('${safeName}')"><div class="cat-info"><b>${safeName}</b></div></div>`;
+            sidebarHTML += `<li><a onclick="filterQuestions('${safeName}')"><i class="fas fa-gamepad"></i> ${safeName}</a><i class="fa${isFav ? 's' : 'r'} fa-star sidebar-fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite('${safeName}', event)"></i></li>`;
+        });
+
+        byTrend.slice(0, 3).forEach((cat) => {
+            const isFav = userData.favorites?.includes(cat.name);
+            const activeCls = (currentCategory === cat.name) ? 'active-filter' : '';
+            const safeName = escapeHtml(cat.name);
+            trendingHTML += `<div class="cat-card ${activeCls}"><i class="fa${isFav ? 's' : 'r'} fa-star fav-star ${isFav ? 'active' : ''}" onclick="toggleFavorite('${safeName}', event)"></i><img src="${cat.img}" class="cat-img" onclick="filterQuestions('${safeName}')"><div class="cat-info"><b>${safeName}</b></div></div>`;
+        });
+
+        document.getElementById('trending-row').innerHTML = trendingHTML;
+        document.getElementById('favorites-row').innerHTML = favHTML;
+        document.getElementById('sidebar-categories').innerHTML = sidebarHTML;
+    }
+
+    window.toggleFavorite = async (name, e) => {
+        e.stopPropagation();
+        let favs = userData.favorites || [];
+        favs = favs.includes(name) ? favs.filter(f => f !== name) : [...favs, name];
+        userData.favorites = favs;
+        renderUI();
+        updateDoc(doc(db, "users", auth.currentUser.uid), { favorites: favs });
+    };
+
+    window.showAllRandomly = () => { currentCategory = 'all'; document.getElementById('questionsHeader').innerText = "اكتشاف عشوائي"; renderUI(); sortAndRender(); };
+    window.filterQuestions = (cat) => { currentCategory = cat; document.getElementById('questionsHeader').innerText = "أسئلة " + cat; renderUI(); sortAndRender(); closeAll(); };
+    window.filterMyQuestions = () => { currentCategory = 'my_questions'; document.getElementById('questionsHeader').innerText = "أسئلتي المنشورة"; sortAndRender(); closeAll(); };
+
+    window.sortAndRender = () => {
+        const container = document.getElementById('trending-questions');
+        container.innerHTML = "";
+        let list = (currentCategory === 'all') ? [...allQuestions]
+            : (currentCategory === 'my_questions') ? allQuestions.filter(q => q.userId === auth.currentUser.uid)
+            : allQuestions.filter(q => q.category === currentCategory);
+
+        const sort = document.getElementById('sortType').value;
+        list.sort((a, b) => sort === 'famous'
+            ? ((b.likes || 0) - (b.dislikes || 0)) - ((a.likes || 0) - (a.dislikes || 0))
+            : b.dateObject - a.dateObject);
+
+        if (list.length === 0) { container.innerHTML = "<p style='text-align:center; padding:20px;'>لا يوجد شيء حالياً.</p>"; return; }
+
+        list.forEach(q => {
+            // ✅ إصلاح: احسب score من likes و dislikes المحفوظة في Firestore
+            const score = (q.likes || 0) - (q.dislikes || 0);
+            const myVote = localVotes[q.id]; // up | down | undefined
+
+            const card = document.createElement('div');
+            card.className = 'question-card';
+
+            const content = document.createElement('div');
+            content.className = 'q-content';
+            content.onclick = () => location.href = `question.html?id=${q.id}`;
+
+            const meta = document.createElement('span');
+            meta.style.cssText = "color:var(--primary); font-size:11px;";
+            meta.innerHTML = `#${escapeHtml(q.category)} • <i class="far fa-clock"></i> ${formatGameTime(q.dateObject)}`;
+
+            const title = document.createElement('h3');
+            title.style.margin = "5px 0";
+            title.innerText = q.title;
+
+            const author = document.createElement('small');
+            author.style.color = "var(--text-dim)";
+            // التعديل لربط اسم كاتب السؤال ببروفايله العام
+            // ✅ إصلاح XSS: تنقية اسم المستخدم قبل إدخاله في innerHTML
+author.innerHTML = `بواسطة: <a href="profile.html?id=${q.userId}" style="color: #ffffff; text-decoration: none; font-weight: bold; border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${escapeHtml(q.user)}</a>`;
+
+            content.append(meta, title, author);
+            card.appendChild(content);
+
+            if (currentCategory === 'my_questions') {
+                const del = document.createElement('div');
+                del.style.cssText = "cursor:pointer; color:var(--downvote); padding:10px;";
+                del.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                del.onclick = (e) => openQuickDelete(q.id, e);
+                card.appendChild(del);
+            }
+
+            const stats = document.createElement('div');
+            stats.className = 'q-stats';
+            stats.innerHTML = `
+                <i class="fas fa-chevron-up vote-btn ${myVote === 'up' ? 'voted-up' : ''}" onclick="handleVote('${q.id}','up', event)"></i>
+                <b>${score}</b>
+                <i class="fas fa-chevron-down vote-btn ${myVote === 'down' ? 'voted-down' : ''}" onclick="handleVote('${q.id}','down', event)"></i>
+            `;
+            card.appendChild(stats);
+            container.appendChild(card);
+        });
+    };
+
+    // إصلاح التصويت — نحدث البطاقة في مكانها بدون إعادة رسم الكل
+    window.handleVote = async (id, type, e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!auth.currentUser) return;
+
+        const prev = localVotes[id];
+
+        if (prev === type) { delete localVotes[id]; }
+        else { localVotes[id] = type; }
+        localStorage.setItem('myVotes_sql_v1', JSON.stringify(localVotes));
+
+        let likeDelta = 0, dislikeDelta = 0;
+        if (prev === 'up'   && type === 'up')   { likeDelta = -1; }
+        else if (prev === 'down' && type === 'down') { dislikeDelta = -1; }
+        else if (prev === 'up'   && type === 'down') { likeDelta = -1; dislikeDelta = 1; }
+        else if (prev === 'down' && type === 'up')   { dislikeDelta = -1; likeDelta = 1; }
+        else if (!prev && type === 'up')   { likeDelta = 1; }
+        else if (!prev && type === 'down') { dislikeDelta = 1; }
+
+        // تحديث البيانات المحلية
+        const q = allQuestions.find(q => q.id === id);
+        if (q) {
+            q.likes    = (q.likes    || 0) + likeDelta;
+            q.dislikes = (q.dislikes || 0) + dislikeDelta;
+        }
+
+        // ✅ تحديث DOM للبطاقة مباشرة بدون إعادة رسم كل القائمة
+        const newVote  = localVotes[id];
+        const newScore = (q.likes || 0) - (q.dislikes || 0);
+        const statsDiv = e.target.closest('.q-stats');
+        if (statsDiv) {
+            const upBtn   = statsDiv.querySelector('.fa-chevron-up');
+            const downBtn = statsDiv.querySelector('.fa-chevron-down');
+            const scoreEl = statsDiv.querySelector('b');
+
+            if (upBtn)   { upBtn.className   = `fas fa-chevron-up vote-btn${newVote === 'up'   ? ' voted-up'   : ''}`; }
+            if (downBtn) { downBtn.className  = `fas fa-chevron-down vote-btn${newVote === 'down' ? ' voted-down' : ''}`; }
+            if (scoreEl) { scoreEl.textContent = newScore; }
+        }
+
+        // تحديث Firestore في الخلفية
+        const update = {};
+        if (likeDelta    !== 0) update.likes    = increment(likeDelta);
+        if (dislikeDelta !== 0) update.dislikes = increment(dislikeDelta);
+        if (Object.keys(update).length > 0) {
+            updateDoc(doc(db, "questions", id), update).catch(console.error);
+        }
+    };
+
+    window.openQuickDelete = (id, e) => { e.stopPropagation(); questionIdToDelete = id; document.getElementById('quickDeleteModal').style.display = 'flex'; };
+    window.closeQuickDelete = () => { document.getElementById('quickDeleteModal').style.display = 'none'; questionIdToDelete = null; };
+
+    document.getElementById('finalConfirmBtn').onclick = async () => {
+        if (!questionIdToDelete) return;
+        const btn = document.getElementById('finalConfirmBtn');
+        btn.disabled = true;
+        btn.innerText = 'جاري الحذف...';
+
+        try {
+            const qRef = doc(db, "questions", questionIdToDelete);
+            const qSnap = await getDoc(qRef);
+            if (qSnap.exists()) {
+                const batch = writeBatch(db);
+                const qData = qSnap.data();
+
+                // 1. حذف التعليقات المرتبطة
+                const coms = await getDocs(query(collection(db, "comments"), where("questionId", "==", questionIdToDelete)));
+                coms.forEach(c => batch.delete(c.ref));
+
+                // 2. حذف الإشعارات المرتبطة
+                const notifs = await getDocs(query(collection(db, "notifications"), where("questionId", "==", questionIdToDelete)));
+                notifs.forEach(n => batch.delete(n.ref));
+
+                // 3. حذف السؤال نفسه
+                batch.delete(qRef);
+
+                // تنفيذ حذف التعليقات والإشعارات والسؤال أولاً
+                await batch.commit();
+
+                // 4. تحديث عداد التصنيف الحقيقي (بعد إيجاد معرّفه الصحيح من اسمه)
+                const catRef = await getCategoryRefByName(qData.category);
+                if (catRef) await updateDoc(catRef, { count: increment(-1) }).catch(console.error);
+                
+                allQuestions = allQuestions.filter(q => q.id !== questionIdToDelete);
+                closeQuickDelete();
+                sortAndRender();
+                showToast("تم حذف السؤال بنجاح 🗑️", "#22c55e");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("حدث خطأ أثناء الحذف، تأكد من الاتصال", "#ef4444");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'حذف';
+        }
+    };
+
+    const forbiddenWords = ["كلمة1", "كلمة2"];
+    document.getElementById('publishBtn').onclick = async () => {
+        const t = document.getElementById('qTitle').value.trim();
+        const warn = document.getElementById('warningMsg');
+        warn.style.display = 'none';
+
+        // ✅ إصلاح: التحقق من طول العنوان
+        if (!t || t.length < 10) {
+            warn.textContent = 'العنوان يجب أن يكون 10 أحرف على الأقل';
+            warn.style.display = 'block';
+            return;
+        }
+        if (t.length > 200) {
+            warn.textContent = 'العنوان طويل جداً (200 حرف كحد أقصى)';
+            warn.style.display = 'block';
+            return;
+        }
+        if (forbiddenWords.some(w => t.includes(w))) {
+            warn.textContent = 'العنوان يحتوي على كلمة ممنوعة';
+            warn.style.display = 'block';
+            return;
+        }
+
+        // منع إرسال أكثر من سؤال كل 60 ثانية مع countdown على الزر
+        const now = Date.now();
+        const btn = document.getElementById('publishBtn');
+
+        // ✅ إصلاح: التحقق الحقيقي من آخر سؤال في Firestore بدل الاعتماد فقط على
+        // localStorage (كان يمكن تجاوزه بمسح الكاش أو التصفح الخاص)
+        let lastPost = parseInt(localStorage.getItem('lastPostTime') || '0');
+        try {
+            const lastQSnap = await getDocs(query(
+                collection(db, "questions"),
+                where("userId", "==", auth.currentUser.uid)
+            ));
+            let latestServerTime = 0;
+            lastQSnap.forEach(d => {
+                const ts = d.data().timestamp;
+                if (ts && ts.toMillis) latestServerTime = Math.max(latestServerTime, ts.toMillis());
+            });
+            lastPost = Math.max(lastPost, latestServerTime);
+        } catch (e) { console.error(e); }
+
+        if (now - lastPost < 60000) {
+            // ابدأ countdown على الزر
+            if (!btn.dataset.counting) {
+                btn.dataset.counting = '1';
+                btn.style.background = '#4b5563';
+                btn.style.cursor = 'not-allowed';
+                const cd = setInterval(() => {
+                    const r = Math.ceil((60000 - (Date.now() - lastPost)) / 1000);
+                    if (r <= 0) {
+                        clearInterval(cd);
+                        btn.disabled = false;
+                        btn.style.background = 'var(--primary)';
+                        btn.style.cursor = 'pointer';
+                        btn.innerText = 'نشر';
+                        delete btn.dataset.counting;
+                    } else {
+                        btn.disabled = true;
+                        btn.innerHTML = `<i class="fas fa-clock"></i> ${r}ث`;
+                    }
+                }, 500);
+            }
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'جاري النشر...';
+
+        try {
+            const cat = document.getElementById('qCategory').value || "عام";
+            await addDoc(collection(db, "questions"), {
+                title: t,
+                category: cat,
+                user: userData.displayName,
+                userId: auth.currentUser.uid,
+                likes: 0,
+                dislikes: 0,
+                timestamp: serverTimestamp()
+            });
+            const catRef = await getCategoryRefByName(cat);
+            if (catRef) await updateDoc(catRef, { count: increment(1) });
+
+            // ✅ إصلاح: إضافة XP عند نشر سؤال
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { xp: increment(10) });
+            localStorage.setItem('lastPostTime', now.toString());
+            showXpToast(10, 'نشر سؤال جديد');
+
+            setTimeout(() => location.reload(), 800);
+        } catch (e) {
+            console.error(e);
+            showToast("فشل النشر، حاول مرة أخرى", "#ef4444");
+            btn.disabled = false;
+            btn.innerText = 'نشر';
+        }
+    };
+
+    document.getElementById('sortType').onchange = () => sortAndRender();
+
+    function startNotificationListener() {
+        if (!auth.currentUser) return;
+        onSnapshot(
+            query(collection(db, "notifications"), where("ownerId", "==", auth.currentUser.uid), where("isRead", "==", false)),
+            (s) => { document.getElementById('notifBadge').style.display = s.empty ? 'none' : 'block'; }
+        );
+    }
+
+    // ✅ إصلاح: التحقق من التكرار قبل إرسال اقتراح تصنيف
+    // ✅ إصلاح: توجيه الاقتراحات للجدول الصحيح (suggestions) بدلاً من الجدول القديم
+    window.sendSuggestion = async () => {
+        const input = document.getElementById('newCatInput');
+        const catName = input.value.trim();
+        if (!catName) { showToast("اكتب اسم التصنيف أولاً", "#ef4444"); return; }
+
+        try {
+            // التحقق من الجدول الصحيح suggestions
+            const existing = await getDocs(query(
+                collection(db, "suggestions"),
+                where("userId", "==", auth.currentUser.uid),
+                where("catName", "==", catName)
+            ));
+            
+            if (!existing.empty) {
+                showToast("أرسلت هذا الاقتراح مسبقاً، انتظر مراجعة المشرف.", "#ef4444");
+                return;
+            }
+
+            // إضافة الاقتراح
+            await addDoc(collection(db, "suggestions"), {
+                catName: catName,
+                userId: auth.currentUser.uid,
+                userName: userData.displayName,
+                timestamp: serverTimestamp()
+            });
+
+            showToast("وصل اقتراحك للمشرفين! سيتم مراجعته فوراً ✅", "#22c55e");
+            input.value = "";
+        } catch (e) {
+            console.error(e);
+            showToast("حدث خطأ، تأكد من الاتصال بالإنترنت.", "#ef4444");
+        }
+    };
+</script>
+</body>
+</html>

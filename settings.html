@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات الحساب | Games Plot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="shared.js"></script>
+    <style>
+        :root {
+            --primary: #a855f7; --primary-glow: rgba(168, 85, 247, 0.4);
+            --bg-body: #0b0f1a; --bg-card: #111827; --accent: #1f2937;
+            --text-main: #ffffff; --text-dim: #9ca3af;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-body); color: var(--text-main); font-family: 'Cairo', sans-serif; overflow-x: hidden; }
+        .header { padding: 20px 5%; display: flex; align-items: center; gap: 20px; background: var(--bg-card); border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 100; }
+        .back-btn { color: white; text-decoration: none; font-size: 22px; transition: 0.3s; }
+        .back-btn:hover { color: var(--primary); transform: translateX(5px); }
+        .profile-container { max-width: 500px; margin: 30px auto; padding: 0 20px; padding-bottom: 50px; }
+        .user-card { background: var(--bg-card); border-radius: 24px; padding: 30px 20px; text-align: center; border: 1px solid var(--primary); box-shadow: 0 0 30px var(--primary-glow); position: relative; }
+        .img-container { position: relative; width: 110px; height: 110px; margin: 0 auto 15px; cursor: pointer; }
+        .profile-img { width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; transition: 0.3s; }
+        .img-container:hover .profile-img { opacity: 0.8; }
+        .edit-overlay { position: absolute; bottom: 0; right: 0; background: var(--primary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-card); font-size: 14px; color: white; }
+        .edit-input { width: 100%; padding: 12px; background: var(--accent); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; color: white; font-family: 'Cairo'; text-align: center; font-size: 18px; outline: none; margin-bottom: 10px; }
+        .edit-input:focus { border-color: var(--primary); }
+        .save-small-btn { padding: 10px 25px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 14px; display: inline-block; margin-bottom: 15px; min-width: 150px; }
+        .save-small-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px var(--primary-glow); }
+        .save-small-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        /* ✅ شريط XP مصلح */
+        .xp-container { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin: 10px 0 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .xp-bar-bg { width: 100%; height: 10px; background: #374151; border-radius: 10px; overflow: hidden; margin-top: 8px; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #d8b4fe); width: 0%; transition: 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
+        .xp-next-label { font-size: 11px; color: var(--text-dim); text-align: left; margin-top: 4px; }
+
+        .stats-row { display: flex; justify-content: center; gap: 40px; margin: 20px 0; }
+        .stat-item b { display: block; font-size: 24px; color: var(--primary); }
+        .stat-item span { font-size: 12px; color: var(--text-dim); }
+        .info-dropdown { margin-top: 20px; text-align: right; }
+        .dropdown-trigger { background: var(--accent); padding: 15px 20px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; }
+        .dropdown-trigger:hover { background: #2d3748; }
+        .dropdown-content { max-height: 0; overflow: hidden; transition: 0.5s ease; background: rgba(31, 41, 55, 0.4); border-radius: 0 0 15px 15px; }
+        .dropdown-content.open { max-height: 600px; padding: 20px; border: 1px solid rgba(168, 85, 247, 0.2); border-top: none; }
+        .pass-input { width: 100%; padding: 12px; background: var(--bg-body); border: 1px solid var(--accent); border-radius: 10px; color: white; margin: 8px 0 15px; outline: none; text-align: right; font-family: 'Cairo'; }
+        .pass-input:focus { border-color: var(--primary); }
+        .logout-btn { width: 100%; margin-top: 30px; padding: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444; border-radius: 15px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .logout-btn:hover { background: #ef4444; color: white; }
+
+        /* شارة الرتبة */
+        .rank-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="index.html" class="back-btn"><i class="fas fa-arrow-right"></i></a>
+    <h1 style="font-size: 18px;">الملف الشخصي</h1>
+</div>
+
+<div class="profile-container">
+    <div class="user-card">
+        <div class="img-container" onclick="document.getElementById('fileInput').click()">
+            <img src="https://via.placeholder.com/150" id="userImg" class="profile-img">
+            <div class="edit-overlay"><i class="fas fa-camera"></i></div>
+            <input type="file" id="fileInput" hidden accept="image/*">
+        </div>
+
+        <input type="text" id="nameInput" class="edit-input" placeholder="اسم العرض">
+        <br>
+        <button class="save-small-btn" onclick="saveProfileChanges()" id="saveBtn">حفظ التعديلات</button>
+
+        <p id="userTag" style="color: var(--text-dim); font-size: 14px; margin-bottom: 6px;">@username</p>
+        <div id="rankBadge" class="rank-badge" style="background: rgba(156,163,175,0.15); color: #9ca3af;">مبتدئ</div>
+
+        <!-- ✅ شريط XP مصلح -->
+        <div class="xp-container">
+            <div style="display:flex; justify-content:space-between; font-size:12px;">
+                <span>المستوى <b id="userLevel">1</b></span>
+                <span id="xpLabel">0 / 100 XP</span>
+            </div>
+            <div class="xp-bar-bg">
+                <div id="xpFill" class="xp-bar-fill"></div>
+            </div>
+            <div class="xp-next-label" id="xpNextLabel"></div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-item"><b id="postsVal">0</b><span>الأسئلة</span></div>
+            <div class="stat-item"><b id="totalXpVal">0</b><span>إجمالي XP</span></div>
+            <div class="stat-item"><b id="likesVal">0</b><span>السمعة</span></div>
+        </div>
+
+        <div class="info-dropdown">
+            <div class="dropdown-trigger" onclick="toggleDropdown()">
+                <span><i class="fas fa-shield-alt"></i> الأمان وتغيير كلمة المرور</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="dropdown-content" id="dropContent">
+                <div style="text-align: right;">
+                    <p id="accEmail" style="font-size: 13px; color: var(--primary); margin-bottom: 15px;"></p>
+                    <label style="font-size: 11px;">كلمة السر القديمة</label>
+                    <input type="password" id="oldPass" class="pass-input" placeholder="••••••••">
+                    <label style="font-size: 11px;">كلمة السر الجديدة</label>
+                    <input type="password" id="newPass" class="pass-input" placeholder="••••••••">
+                    <button id="updatePassBtn" class="save-small-btn" style="width: 100%;" onclick="changeUserPassword()">تحديث كلمة المرور</button>
+                    <p id="passStatus" style="font-size: 11px; text-align: center; margin-top: 10px;"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } from "./api-firestore.js";
+
+    const firebaseConfig = { apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw", authDomain: "gamerhub-7ca56.firebaseapp.com", projectId: "gamerhub-7ca56", appId: "1:228228967948:web:83a919fd0dfceb07aa8829" };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ✅ إصلاح: getPlayerRank أصبحت موحّدة في shared.js بدل تكرارها في كل صفحة
+
+    function showToast(msg, color = '#a855f7') {
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:${color};color:white;padding:10px 22px;border-radius:30px;font-size:13px;font-family:'Cairo';font-weight:bold;z-index:9999;box-shadow:0 5px 20px rgba(0,0,0,0.4);transition:opacity 0.4s;`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 2800);
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            document.getElementById('accEmail').innerText = "الإيميل: " + (user.email || "—");
+
+            const snap = await getDoc(doc(db, "users", user.uid));
+
+            // ✅ إصلاح: لو تم حذف بروفايل المستخدم (مثلاً من لوحة الإدارة) لكن حسابه بقي فعالاً في Auth
+            if (!snap.exists()) {
+                await signOut(auth);
+                window.location.href = "login.html";
+                return;
+            }
+
+            if (snap.exists()) {
+                const data = snap.data();
+                document.getElementById('nameInput').value = data.displayName || "";
+                document.getElementById('userTag').innerText = "@" + (data.username || "user");
+                if (data.photoURL) document.getElementById('userImg').src = data.photoURL;
+
+                // ✅ إصلاح: حساب XP وشريط التقدم بشكل صحيح لكل مستوى
+                const totalXP = data.xp || 0;
+                const rank = getPlayerRank(totalXP);
+
+                document.getElementById('userLevel').innerText = rank.level;
+                document.getElementById('totalXpVal').innerText = totalXP;
+
+                // شارة الرتبة
+                const badge = document.getElementById('rankBadge');
+                badge.textContent = rank.rankName;
+                badge.style.color = rank.color;
+                badge.style.background = rank.color + '22';
+                badge.style.border = `1px solid ${rank.color}55`;
+
+                // label XP
+                document.getElementById('xpLabel').innerText = `${rank.xpInLevel} / ${rank.xpPerLevel} XP`;
+                if (rank.nextRankXP) {
+                    document.getElementById('xpNextLabel').innerText = `${totalXP} / ${rank.nextRankXP} XP للرتبة التالية`;
+                }
+
+                // تحريك شريط التقدم
+                setTimeout(() => {
+                    document.getElementById('xpFill').style.width = rank.progressPct + "%";
+                }, 400);
+            }
+
+            // جلب عدد الأسئلة والسمعة
+            const qSnap = await getDocs(query(collection(db, "questions"), where("userId", "==", user.uid)));
+            let score = 0;
+            qSnap.forEach(d => score += (d.data().likes || 0));
+            document.getElementById('postsVal').innerText = qSnap.size;
+            document.getElementById('likesVal').innerText = score;
+
+        } else { window.location.href = "login.html"; }
+    });
+
+    // ✅ إصلاح: حفظ الصورة على Cloudinary بدل Base64 في Firestore
+    window.saveProfileChanges = async () => {
+        const btn = document.getElementById('saveBtn');
+        const file = document.getElementById('fileInput').files[0];
+        const newName = document.getElementById('nameInput').value.trim();
+        if (!newName) { showToast('أدخل اسم العرض أولاً', '#ef4444'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+        try {
+            let finalPhotoURL = document.getElementById('userImg').src;
+
+            if (file) {
+                // ✅ إصلاح: رفع الصورة على Cloudinary (نفس إعداد التعليقات) بدل Base64
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', 'gamer_preset');
+                const res = await fetch('https://api.cloudinary.com/v1_1/dqsy5u786/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.secure_url) {
+                    finalPhotoURL = data.secure_url;
+                } else {
+                    throw new Error("فشل رفع الصورة");
+                }
+            }
+
+            await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                displayName: newName,
+                photoURL: finalPhotoURL
+            });
+
+            btn.style.background = "#22c55e";
+            btn.innerHTML = '<i class="fas fa-check"></i> تم الحفظ';
+            setTimeout(() => location.reload(), 1000);
+
+        } catch (e) {
+            console.error(e);
+            btn.disabled = false;
+            btn.innerHTML = "فشل الحفظ ❌";
+            btn.style.background = "";
+        }
+    };
+
+    window.changeUserPassword = async () => {
+        const oldP = document.getElementById('oldPass').value;
+        const newP = document.getElementById('newPass').value;
+        const btn = document.getElementById('updatePassBtn');
+        const status = document.getElementById('passStatus');
+
+        if (!oldP || !newP) { status.innerText = "أكمل الحقول ⚠️"; return; }
+        if (newP.length < 6) { status.innerText = "كلمة المرور يجب أن تكون 6 أحرف على الأقل"; status.style.color = "#ef4444"; return; }
+
+        btn.disabled = true;
+        btn.innerText = "جاري التحقق...";
+
+        try {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email, oldP);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await updatePassword(auth.currentUser, newP);
+
+            btn.style.background = "#22c55e";
+            btn.innerText = "تم التحديث ✅";
+            status.innerText = "تغيرت الكلمة بنجاح!";
+            status.style.color = "#22c55e";
+            document.getElementById('oldPass').value = "";
+            document.getElementById('newPass').value = "";
+            setTimeout(() => { btn.disabled = false; btn.innerText = "تحديث كلمة المرور"; btn.style.background = "var(--primary)"; }, 3000);
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerText = "تحديث كلمة المرور";
+            status.style.color = "#ef4444";
+            status.innerText = "كلمة المرور القديمة خاطئة أو حدث خطأ";
+        }
+    };
+
+    let currentPreviewUrl = null;
+    document.getElementById('fileInput').onchange = (e) => {
+        if (e.target.files[0]) {
+            // ✅ إصلاح: تحرير الـ object URL السابق قبل إنشاء واحد جديد لتفادي تسريب الذاكرة
+            if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+            currentPreviewUrl = URL.createObjectURL(e.target.files[0]);
+            document.getElementById('userImg').src = currentPreviewUrl;
+        }
+    };
+
+    window.toggleDropdown = () => document.getElementById('dropContent').classList.toggle('open');
+    document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href = "login.html");
+</script>
+</body>
+</html>

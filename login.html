@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | Games Plot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #a855f7;
+            --bg-body: #0b0f1a;
+            --bg-card: #111827;
+            --text-main: #ffffff;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Cairo', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .login-card {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+            text-align: center;
+        }
+        h2 { margin-bottom: 25px; font-weight: 800; color: var(--primary); }
+        .input-group { margin-bottom: 15px; text-align: right; }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Cairo';
+            outline: none;
+            margin-top: 5px;
+        }
+        input:focus { border-color: var(--primary); }
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .login-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        
+        /* زر قوقل الجديد */
+        .google-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #1f2937;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-family: 'Cairo';
+            transition: 0.3s;
+        }
+        .google-btn:hover { background: #f9fafb; border-color: #ccc; }
+        
+        .divider {
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            color: #4b5563;
+            font-size: 14px;
+        }
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #374151;
+            margin: 0 10px;
+        }
+        a { color: var(--primary); text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2>GAMES PLOT</h2>
+    
+    <div class="input-group">
+        <input type="email" id="email" placeholder="البريد الإلكتروني">
+    </div>
+    <div class="input-group">
+        <input type="password" id="password" placeholder="كلمة المرور">
+    </div>
+    
+    <button class="login-btn" onclick="loginEmail()">تسجيل الدخول</button>
+
+    <div class="divider">أو</div>
+
+    <button class="google-btn" onclick="loginWithGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+        الدخول عبر Google
+    </button>
+
+    <p style="margin-top: 20px; font-size: 14px; color: #9ca3af;">
+        ليس لديك حساب؟ <a href="register.html">سجل الآن</a>
+    </p>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+        getAuth, 
+        signInWithEmailAndPassword, 
+        GoogleAuthProvider, 
+        signInWithPopup 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+        getFirestore, 
+        doc, 
+        getDoc, 
+        setDoc 
+    } from "./api-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw",
+        authDomain: "gamerhub-7ca56.firebaseapp.com",
+        projectId: "gamerhub-7ca56",
+        appId: "1:228228967948:web:83a919fd0dfceb07aa8829"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // تسجيل الدخول العادي
+    window.loginEmail = async () => {
+        const e = document.getElementById('email').value.trim();
+        const p = document.getElementById('password').value;
+
+        // ✅ إصلاح: تحقق من عدم ترك الحقول فارغة قبل إرسال الطلب لـ Firebase
+        if (!e || !p) {
+            alert("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
+            return;
+        }
+
+        const btn = document.querySelector('.login-btn');
+        btn.disabled = true;
+        btn.innerText = "جاري الدخول...";
+
+        try {
+            await signInWithEmailAndPassword(auth, e, p);
+            window.location.href = "index.html";
+        } catch (err) {
+            alert("خطأ في البيانات أو الحساب غير موجود");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "تسجيل الدخول";
+        }
+    };
+
+    // تسجيل الدخول عبر Google
+    window.loginWithGoogle = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            // التحقق من وجود المستخدم في Firestore
+            const userRef = doc(db, "users", user.uid);
+            const snap = await getDoc(userRef);
+
+            if (!snap.exists()) {
+                // إذا كان مستخدم جديد، ننشئ له بروفايل ببيانات قوقل
+                await setDoc(userRef, {
+                    displayName: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    username: user.email.split('@')[0] + Math.floor(Math.random() * 100), // اسم مستخدم مقترح
+                    xp: 0,
+                    createdAt: new Date()
+                });
+            }
+
+            window.location.href = "index.html";
+        } catch (error) {
+            console.error(error);
+            if(error.code !== 'auth/cancelled-popup-request') {
+                alert("حدث خطأ أثناء الاتصال بقوقل");
+            }
+        }
+    };
+</script>
+
+</body>
+</html>

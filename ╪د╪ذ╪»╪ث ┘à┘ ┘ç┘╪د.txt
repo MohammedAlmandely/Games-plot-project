@@ -1,0 +1,26 @@
+GamesPlot + MySQL — ابدأ من هنا
+
+1) شغّل WampServer وتأكد أن MySQL شغال.
+2) قاعدة gamesplot والجداول عندك جاهزة من GamesPlot.sql.
+3) افتح مجلد server.
+4) انسخ .env.example وسم النسخة .env.
+5) إذا root عنده كلمة مرور، اكتبها في DB_PASSWORD داخل .env. إذا بدون كلمة مرور اتركها فارغة.
+6) افتح CMD أو PowerShell داخل server وشغّل:
+
+   npm install
+   npm start
+
+7) افتح في المتصفح:
+   http://localhost:3000/api/health
+
+   إذا ظهر database: connected فالاتصال بـ MySQL سليم.
+
+8) افتح الموقع من:
+   http://localhost:3000
+
+مهم: لا تفتح ملفات HTML بالنقر المزدوج. شغّل الموقع من Node على localhost:3000.
+
+إذا عندك بيانات قديمة داخل Firestore وتبي تنقلها إلى MySQL، اقرأ:
+server/README_AR.md
+
+Firebase Authentication ما زال مسؤولاً عن تسجيل الدخول، لكن بيانات الموقع أصبحت تمر عبر API إلى MySQL.

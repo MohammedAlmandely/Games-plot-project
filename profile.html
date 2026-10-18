@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي | Games Plot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="shared.js"></script>
+    <style>
+        :root {
+            --primary: #a855f7; --primary-glow: rgba(168, 85, 247, 0.4);
+            --bg-body: #0b0f1a; --bg-card: #111827; --accent: #1f2937;
+            --text-main: #ffffff; --text-dim: #9ca3af;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-body); color: var(--text-main); font-family: 'Cairo', sans-serif; }
+        .header { padding: 20px 5%; display: flex; align-items: center; gap: 20px; background: var(--bg-card); border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 100; }
+        .back-btn { color: white; text-decoration: none; font-size: 22px; transition: 0.3s; }
+        .back-btn:hover { color: var(--primary); transform: translateX(5px); }
+        .profile-container { max-width: 500px; margin: 30px auto; padding: 0 20px; }
+        .user-card { background: var(--bg-card); border-radius: 24px; padding: 30px 20px; text-align: center; border: 1px solid var(--primary); box-shadow: 0 0 30px var(--primary-glow); }
+        .img-container { width: 110px; height: 110px; margin: 0 auto 15px; }
+        .profile-img { width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; }
+        
+        .xp-container { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin: 10px 0 20px; border: 1px solid rgba(255,255,255,0.05); text-align: right; }
+        .xp-bar-bg { width: 100%; height: 10px; background: #374151; border-radius: 10px; overflow: hidden; margin-top: 8px; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #d8b4fe); width: 0%; transition: 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
+
+        .stats-row { display: flex; justify-content: center; gap: 40px; margin: 20px 0; }
+        .stat-item b { display: block; font-size: 24px; color: var(--primary); }
+        .stat-item span { font-size: 12px; color: var(--text-dim); }
+        .rank-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="index.html" class="back-btn"><i class="fas fa-arrow-right"></i></a>
+    <h1 style="font-size: 18px;" id="headerTitle">الملف الشخصي</h1>
+</div>
+
+<div class="profile-container">
+    <div class="user-card">
+        <div class="img-container">
+            <img src="https://via.placeholder.com/150" id="userImg" class="profile-img">
+        </div>
+
+        <h2 id="userNameDisplay" style="margin-bottom: 5px; font-weight: 800;">جاري التحميل...</h2>
+        <p id="userTag" style="color: var(--text-dim); font-size: 14px; margin-bottom: 12px;">@username</p>
+        <div id="rankBadge" class="rank-badge">مبتدئ</div>
+
+        <div class="xp-container">
+            <div style="display:flex; justify-content:space-between; font-size:12px; direction: ltr;">
+                <span id="xpLabel">0 / 100 XP</span>
+                <span>المستوى <b id="userLevel">0</b></span>
+            </div>
+            <div class="xp-bar-bg">
+                <div id="xpFill" class="xp-bar-fill"></div>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-item"><b id="postsVal">0</b><span>الأسئلة</span></div>
+            <div class="stat-item"><b id="totalXpVal">0</b><span>إجمالي XP</span></div>
+            <div class="stat-item"><b id="likesVal">0</b><span>السمعة</span></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "./api-firestore.js";
+
+    const firebaseConfig = { apiKey: "AIzaSyCMncc2PvvIMlhU6mth0WB0lA6LE7q_ldw", authDomain: "gamerhub-7ca56.firebaseapp.com", projectId: "gamerhub-7ca56", appId: "1:228228967948:web:83a919fd0dfceb07aa8829" };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let targetId = urlParams.get('id');
+
+    // ✅ إصلاح: getPlayerRank أصبحت موحّدة في shared.js بدل تكرارها هنا
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "login.html"; return; }
+       // إذا دخل المستخدم بدون ID في الرابط، أو كان الـ ID بالرابط هو نفس الـ ID لحسابه الحالي
+        if (!targetId || targetId === user.uid) {
+            // يتم تحويله فوراً لصفحة الإعدادات وتعديل البيانات ولا يفتح هذه الصفحة
+            window.location.href = "settings.html";
+            return; // إيقاف تنفيذ باقي الكود
+        }
+
+        const snap = await getDoc(doc(db, "users", targetId));
+        if (!snap.exists()) {
+            // ✅ إصلاح: إظهار رسالة واضحة بدل ترك الصفحة عالقة على "جاري التحميل..."
+            document.getElementById('userNameDisplay').innerText = "المستخدم غير موجود";
+            document.getElementById('userTag').innerText = "";
+            document.getElementById('rankBadge').style.display = 'none';
+            document.querySelector('.xp-container').style.display = 'none';
+            document.querySelector('.stats-row').style.display = 'none';
+            return;
+        }
+        if (snap.exists()) {
+            const data = snap.data();
+            document.getElementById('userNameDisplay').innerText = data.displayName || "عضو مجهول";
+            document.getElementById('userTag').innerText = "@" + (data.username || "user");
+            if (data.photoURL) document.getElementById('userImg').src = data.photoURL;
+
+            const rank = getPlayerRank(data.xp || 0);
+            document.getElementById('userLevel').innerText = rank.level;
+            document.getElementById('totalXpVal').innerText = data.xp || 0;
+
+            const badge = document.getElementById('rankBadge');
+            badge.textContent = rank.rankName; badge.style.color = rank.color;
+            badge.style.background = rank.color + '22'; badge.style.border = `1px solid ${rank.color}55`;
+
+            document.getElementById('xpLabel').innerText = `${rank.xpInLevel} / ${rank.xpPerLevel} XP`;
+            setTimeout(() => { document.getElementById('xpFill').style.width = rank.progressPct + "%"; }, 400);
+        }
+
+        const qSnap = await getDocs(query(collection(db, "questions"), where("userId", "==", targetId)));
+        let score = 0; qSnap.forEach(d => score += (d.data().likes || 0));
+        document.getElementById('postsVal').innerText = qSnap.size;
+        document.getElementById('likesVal').innerText = score;
+    });
+</script>
+</body>
+</html>
